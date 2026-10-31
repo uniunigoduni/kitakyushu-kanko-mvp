@@ -12,6 +12,7 @@ import { createPopup } from './ui/popup.js';
 import { createTravel } from './ui/travel.js';
 import { createAR } from './ar.js';
 import { createPay } from './pay.js';
+import { createAccount } from './account.js';
 import { createFlavor } from './ui/flavor.js';
 import { createZoom } from './ui/zoom.js';
 
@@ -93,7 +94,7 @@ function start(world, sites, arData) {
   const app = {
     t: -1, year: NOW_YEAR, era: null, selected: null, tNow: T_NOW,
     sites, byId: new Map(sites.map((s) => [s.id, s])),
-    overlays: [], // AR・決済の画面（上に重なったものから Esc で閉じる）
+    overlays: [], // AR・決済・登録の画面、右上のメニュー（上に重なったものから Esc で閉じる）
     on(type, f) {
       if (!listeners.has(type)) listeners.set(type, new Set());
       listeners.get(type).add(f);
@@ -104,6 +105,7 @@ function start(world, sites, arData) {
     animateT, selectSite, deselect, backToNow,
     openAR: () => {},
     openPay: () => {},
+    openAccount: () => {},
   };
 
   const title = createTitle();
@@ -222,6 +224,9 @@ function start(world, sites, arData) {
   app.openAR = (s, img) => ar.open(s, img);
   const pay = createPay(app, world);
   app.openPay = (s) => pay.open(s);
+  // 会員登録（見た目だけのデモ）。右上のボタンは時代の絵より先に置く（絵はボタンの手前で終わる）
+  const account = createAccount(app, world);
+  app.openAccount = (type) => account.open(type);
   // 吹き出しを開いたら、360度の画像を先に読み込んでおく
   app.on('select', (s) => { if (s.pano) ar.preload(s.pano).catch(() => {}); });
   createBand(app, sites.filter((s) => !s.dummy)); // ダミーのピンは一覧に出さない

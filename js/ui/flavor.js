@@ -303,12 +303,16 @@ export function createFlavor(app) {
   const scenes = new Map();
   let cur = null, w = 0;
 
-  // 帯の左端はタイトルの文字の右、右端は地図の窓の右。時代名・書体・画面の幅が変わるたびに測り直す
+  // 帯の左端はタイトルの文字の右、右端は右上の登録のボタンの手前（ボタンがなければ地図の窓の右）。
+  // 時代名・書体・画面の幅・ボタンの幅（登録して名前に変わる）が変わるたびに測り直す
+  const acct = title.querySelector('.acct-btn');
   function layout() {
     const left = Math.round(Math.max(h1.getBoundingClientRect().right, yearEl.getBoundingClientRect().right) + 20);
+    const right = Math.round(acct ? acct.getBoundingClientRect().left - 16 : map.getBoundingClientRect().right);
     const s = title.offsetHeight / H;
-    const room = Math.max(0, map.getBoundingClientRect().right - left);
+    const room = Math.max(0, right - left);
     root.style.setProperty('--fl-left', px(left));
+    root.style.setProperty('--fl-right', px(root.clientWidth - right));
     root.style.setProperty('--fl-s', s.toFixed(4));
     root.classList.toggle('is-cramped', room < 72);
     const nw = room / s;
@@ -354,7 +358,7 @@ export function createFlavor(app) {
   app.on('t', () => cur?.update?.(app.era, app.year));
   new MutationObserver(sync).observe(body, { attributes: true, attributeFilter: ['class'] });
   const ro = new ResizeObserver(layout);
-  for (const e of [title, h1, yearEl, map]) ro.observe(e);
+  for (const e of [title, h1, yearEl, map, acct]) if (e) ro.observe(e);
   layout();
   sync();
 }
