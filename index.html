@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="門司区の史跡を、縄文から現代まで時代をさかのぼって巡る地図（デモ版）">
+<meta name="theme-color" content="#000000">
+<title>門司ヒストリーマップ</title>
+<link rel="icon" href="data:,">
+<link rel="preload" href="assets/fonts/yuji-syuku.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/shippori-mincho-600.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/noto-sans-jp-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/style.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three/build/three.module.js",
+    "three/addons/": "./vendor/three/examples/jsm/",
+    "camera-controls": "./vendor/camera-controls/camera-controls.module.js"
+  }
+}
+</script>
+<script type="module" src="js/main.js"></script>
+</head>
+<body class="font-brush is-loading is-intro">
+<main id="app">
+  <div id="map" aria-label="門司区の立体地図。ドラッグで移動、右ドラッグで回転、ホイールで拡大・縮小"></div>
+  <div id="flavor" aria-hidden="true"></div>
+
+  <header id="title">
+    <h1><span class="title-name">門司ヒストリーマップ</span><span class="title-era">縄文</span></h1>
+    <p class="title-year"></p>
+  </header>
+
+  <nav id="timeline" aria-label="時代を選ぶ">
+    <svg class="tl-leaders" aria-hidden="true"></svg>
+    <ol class="tl-major" aria-label="主なできごと"></ol>
+    <div class="tl-slider" role="slider" tabindex="0" aria-orientation="vertical" aria-label="年代" aria-valuemin="0" aria-valuemax="1000">
+      <div class="tl-track"><div class="tl-span"></div></div>
+      <div class="tl-ticks"></div>
+      <ol class="tl-eras"></ol>
+      <div class="tl-knob"></div>
+    </div>
+  </nav>
+  <section id="detail" aria-label="門司のくわしい年表">
+    <div class="detail-scroll thin-scroll"></div>
+  </section>
+
+  <footer id="band" aria-label="史跡の一覧">
+    <div class="band-scroll thin-scroll"><ol class="band-list"></ol></div>
+  </footer>
+
+  <div id="loading" role="status">地図を読み込んでいます</div>
+</main>
+<noscript><p class="noscript">この地図を見るには JavaScript を有効にしてください。</p></noscript>
+</body>
+</html>
