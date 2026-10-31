@@ -1,4 +1,4 @@
-// 地形・海・海岸線・区の境界。色は自然な色で作り、時代の色合いは後処理（grade.js）でかける。
+// 地形・海・海岸線・区の境界。色は自然な色で作り、どの時代も同じ色で見せる。
 import * as THREE from 'three';
 import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
@@ -123,7 +123,7 @@ export function buildTerrain(geo, shared) {
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, metalness: 0 });
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, {
-      uYear: shared.uYear, uBg: shared.uBg, uEdge: shared.uEdge, uContour: shared.uContour,
+      uYear: shared.uYear, uBg: shared.uBg, uEdge: shared.uEdge,
       uTownCol: { value: srgb('#b9b1a1') },
     });
     sh.vertexShader = sh.vertexShader
@@ -134,7 +134,7 @@ export function buildTerrain(geo, shared) {
         vMask = aMask; vTown = aTown; vWP = (modelMatrix * vec4(transformed, 1.0)).xyz;`);
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
-        uniform float uYear, uContour; uniform vec3 uBg, uTownCol; uniform vec4 uEdge;
+        uniform float uYear; uniform vec3 uBg, uTownCol; uniform vec4 uEdge;
         varying float vMask; varying float vTown; varying vec3 vWP;
         ${EDGE_GLSL}`)
       .replace('#include <color_fragment>', `#include <color_fragment>
@@ -148,7 +148,7 @@ export function buildTerrain(geo, shared) {
         float fw = fwidth(u);
         float dl = abs(fract(u + 0.5) - 0.5);
         float cl = (1.0 - smoothstep(0.6 * fw, 1.6 * fw, dl)) * (1.0 - smoothstep(0.12, 0.35, fw));
-        cl *= inMoji * smoothstep(40.0, 70.0, hm) * uContour;
+        cl *= inMoji * smoothstep(40.0, 70.0, hm);
         diffuseColor.rgb *= 1.0 - 0.32 * cl;`)
       .replace('#include <dithering_fragment>', `#include <dithering_fragment>
         gl_FragColor.rgb = mix(uBg, gl_FragColor.rgb, edgeFade(vWP.xz));`);

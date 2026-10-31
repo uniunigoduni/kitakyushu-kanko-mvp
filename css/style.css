@@ -504,9 +504,8 @@ button.dt-item { width: 100%; text-align: left; }
 .fl-clouds.is-ukiyoe .fl-mist { display: block; }
 .fl-clouds.is-ukiyoe .fl-sky { background: linear-gradient(rgba(46, 70, 104, .8), rgba(46, 70, 104, .32) 28%, transparent 54%); }
 
-/* 大正・昭和初期：機関車。ニュース映画の白黒（銀色の空・ちらつき） */
-.fl-train .fl-glow { background: linear-gradient(to top, rgba(201, 193, 177, .5), rgba(201, 193, 177, .2) 50%, rgba(201, 193, 177, .05)); animation: fl-flicker 2.3s steps(1) infinite; }
-@keyframes fl-flicker { 0% { opacity: 1; } 14% { opacity: .86; } 19% { opacity: 1; } 46% { opacity: .93; } 58% { opacity: 1; } 81% { opacity: .82; } 85% { opacity: 1; } }
+/* 大正・昭和初期：機関車と煙 */
+.fl-train .fl-glow { background: linear-gradient(to top, rgba(201, 193, 177, .5), rgba(201, 193, 177, .2) 50%, rgba(201, 193, 177, .05)); }
 .fl-train { --puff: rgba(239, 231, 214, .95); }
 .fl-train .fl-art { fill: #17140f; }
 .fl-train .win { fill: #efe7d6; fill-opacity: .5; }
@@ -548,7 +547,7 @@ button.dt-item { width: 100%; text-align: left; }
   display: grid; place-items: center;
   border-radius: var(--radius);
   color: var(--muted); font-size: 13px; letter-spacing: .2em;
-  background: #2a2220;
+  background: #1a2630;
   transition: opacity 300ms ease;
   z-index: 50;
 }
