@@ -2,7 +2,7 @@
 // 開いた直後は、年代のスライダーを縄文から現代まで1秒で流してから現代で止まる。
 import { loadGeo } from './map/geo.js';
 import { createWorld } from './map/world.js';
-import { NOW_YEAR, ERAS, ERA_BY_ID, eraIndexAtT, lookAtT, tToYear, yearToT, toCss } from './eras.js';
+import { NOW_YEAR, ERAS, ERA_BY_ID, eraIndexAtT, accentAtT, tToYear, yearToT, toCss } from './eras.js';
 import { clamp, easeInOut, reducedMotion } from './util.js';
 import { createTitle } from './ui/title.js';
 import { createTimeline } from './ui/timeline.js';
@@ -12,6 +12,7 @@ import { createPopup } from './ui/popup.js';
 import { createAR } from './ar.js';
 import { createPay } from './pay.js';
 import { createFlavor } from './ui/flavor.js';
+import { createZoom } from './ui/zoom.js';
 
 // 現代の今年（小数の誤差で前の年に見えないよう、年の途中に置く）
 const T_NOW = yearToT(NOW_YEAR + 0.5);
@@ -95,17 +96,15 @@ function start(world, sites, arData) {
 
   const title = createTitle();
 
-  // 年代を動かす。ピンは時代の区切りで入れ替わり、色と年は細かく変わる
+  // 年代を動かす。ピンは時代の区切りで入れ替わり、差し色と年は細かく変わる
   function setT(t, fromAnim = false) {
     if (!fromAnim) stopAnim();
     t = clamp(t, 0, 1);
     if (t === app.t) return;
     app.t = t;
-    const look = lookAtT(t);
-    world.setLook(look);
     app.year = Math.min(NOW_YEAR, tToYear(t));
     world.setYear(app.year);
-    root.style.setProperty('--era-accent', toCss(look.accent));
+    root.style.setProperty('--era-accent', toCss(accentAtT(t)));
     const era = ERAS[eraIndexAtT(t)];
     if (era !== app.era) {
       const prev = app.era;
@@ -188,6 +187,7 @@ function start(world, sites, arData) {
   const { major, detail } = timelineData(timelineRaw, sites);
   const pins = createPins(app, world, sites);
   const popup = createPopup(app, world, pins);
+  createZoom(world, popup);
   const ar = createAR(app, world, arData);
   app.openAR = (s, img) => ar.open(s, img);
   const pay = createPay(app, world);

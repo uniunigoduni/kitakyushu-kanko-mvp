@@ -73,6 +73,36 @@ a { color: inherit; }
 .map-pins { transition: opacity 400ms ease; }
 body.is-intro .map-pins { opacity: 0; }
 
+/* 拡大・縮小のボタン（地図の窓の右下）。2つを1枚の面にまとめ、1px の線で区切る */
+.map-zoom {
+  position: absolute; right: 12px; bottom: 12px; z-index: 2;
+  display: flex; flex-direction: column;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: opacity 400ms ease, visibility 400ms;
+}
+body.is-intro .map-zoom { opacity: 0; visibility: hidden; }
+/* 吹き出しが重なる間は見えなくし、ポインターは下へ通す。キーボードでは選べるようにしておき、
+   選んでいる間とポインターが乗っている間は、吹き出しの上に出す */
+.map-zoom.is-covered { opacity: 0; pointer-events: none; transition: opacity var(--t-fade); }
+.map-zoom:hover, .map-zoom:focus-within { z-index: 4; }
+.map-zoom button {
+  width: 40px; height: 40px;
+  display: grid; place-items: center;
+  color: var(--text);
+  transition: background-color var(--t-hover), color var(--t-hover);
+}
+/* 角の丸みは外の枠に合わせる（フォーカスの枠も同じ形になる） */
+.map-zoom button:first-child { border-radius: 11px 11px 0 0; }
+.map-zoom button:last-child { border-radius: 0 0 11px 11px; }
+.map-zoom button + button { border-top: 1px solid var(--line); }
+.map-zoom button:hover { background: var(--overlay); color: var(--strong); }
+.map-zoom button[aria-disabled='true'] { background: none; color: var(--line); cursor: default; }
+.map-zoom button:focus-visible { outline-offset: -3px; }
+.map-zoom svg { width: 18px; height: 18px; }
+
 /* 地名 */
 .lbl {
   font: 600 13px/1 var(--serif);
@@ -210,7 +240,7 @@ body.is-intro .map-pins { opacity: 0; }
   transition: opacity var(--t-panel), transform var(--t-panel), visibility 0s linear 180ms;
 }
 #detail.is-open { opacity: 1; visibility: visible; transform: none; transition: opacity var(--t-panel), transform var(--t-panel), visibility 0s; }
-.detail-scroll { position: absolute; inset: 0; overflow-y: auto; padding: 14px 0 40vh; overscroll-behavior: contain; }
+.detail-scroll { position: absolute; inset: 0; overflow-y: auto; padding: 14px 0 16px; overscroll-behavior: contain; }
 .dt-era {
   position: sticky; top: -14px; z-index: 1;
   margin: 6px 0 2px; padding: 12px 18px 6px;
@@ -342,7 +372,7 @@ button.dt-item { width: 100%; text-align: left; }
 @keyframes pin-pop { from { transform: translate(calc(var(--head) / -2), calc(var(--head) / 2)) scale(.6); } }
 
 /* 赤い矢印（赤ペンの手描き） */
-.arrow-layer { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 2; }
+.arrow-layer { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 1; } /* 拡大・縮小のボタン（2）より下 */
 .arrow-layer g { transition: opacity 400ms ease; }
 .arrow-layer path { fill: none; stroke: var(--red); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .45)); }
 .arrow-layer g.is-dim { opacity: .35; }
@@ -474,9 +504,8 @@ button.dt-item { width: 100%; text-align: left; }
 .fl-clouds.is-ukiyoe .fl-mist { display: block; }
 .fl-clouds.is-ukiyoe .fl-sky { background: linear-gradient(rgba(46, 70, 104, .8), rgba(46, 70, 104, .32) 28%, transparent 54%); }
 
-/* 大正・昭和初期：機関車。ニュース映画の白黒（銀色の空・ちらつき） */
-.fl-train .fl-glow { background: linear-gradient(to top, rgba(201, 193, 177, .5), rgba(201, 193, 177, .2) 50%, rgba(201, 193, 177, .05)); animation: fl-flicker 2.3s steps(1) infinite; }
-@keyframes fl-flicker { 0% { opacity: 1; } 14% { opacity: .86; } 19% { opacity: 1; } 46% { opacity: .93; } 58% { opacity: 1; } 81% { opacity: .82; } 85% { opacity: 1; } }
+/* 大正・昭和初期：機関車と煙 */
+.fl-train .fl-glow { background: linear-gradient(to top, rgba(201, 193, 177, .5), rgba(201, 193, 177, .2) 50%, rgba(201, 193, 177, .05)); }
 .fl-train { --puff: rgba(239, 231, 214, .95); }
 .fl-train .fl-art { fill: #17140f; }
 .fl-train .win { fill: #efe7d6; fill-opacity: .5; }
@@ -518,7 +547,7 @@ button.dt-item { width: 100%; text-align: left; }
   display: grid; place-items: center;
   border-radius: var(--radius);
   color: var(--muted); font-size: 13px; letter-spacing: .2em;
-  background: #2a2220;
+  background: #1a2630;
   transition: opacity 300ms ease;
   z-index: 50;
 }
@@ -683,6 +712,8 @@ body.is-intro #timeline, body.is-intro #band, body.is-intro .map-canvas { pointe
   .tl-eras { left: 34px; }
   .tl-eras li { font-size: 11px; }
   #detail { display: none; }
+  .map-zoom { right: 8px; bottom: 8px; }
+  .map-zoom button { width: 44px; height: 44px; }
   .band-card { width: 176px; }
   .band-card .bc-thumb { width: 52px; }
   .popup { width: min(320px, calc(100% - 16px)); }

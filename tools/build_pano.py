@@ -19,10 +19,6 @@ BLEND = 0.10  # 端を重ねる幅（横幅に対する割合）
 PATCHES = {
     "mojiko_retro": [((2330, 687, 2394, 702), 2397, 32)],
 }
-# 大正〜戦前はニュース映画の白黒（暖かい銀色）にそろえる。値は js/map/grade.js と同じ
-MONO = {"moji_station"}
-SILVER_HI = np.array([0.937, 0.906, 0.839])
-SILVER_LO = np.array([0.090, 0.078, 0.059])
 # サムネイルの中心（横・縦の割合）
 THUMB = {
     "dannoura": (0.50, 0.40), "moji_castle": (0.38, 0.45), "moji_station": (0.62, 0.35),
@@ -37,13 +33,6 @@ def patch(a, rects):
             w = min(sw, x1 - x)
             a[y0:y1, x:x + w] = src[:, :w]
     return a
-
-
-def silver(a):
-    luma = a @ np.array([0.2126, 0.7152, 0.0722])
-    t = np.clip((luma - 0.02) / 0.96, 0, 1)
-    m = (t * t * (3 - 2 * t))[..., None]
-    return 1 - (1 - m * SILVER_HI) * (1 - SILVER_LO)
 
 
 def box(a, r, axis):
@@ -101,8 +90,6 @@ def main():
         pid = src.stem
         a = np.asarray(Image.open(src).convert("RGB"), dtype=np.float64) / 255
         a = patch(a, PATCHES.get(pid, []))
-        if pid in MONO:
-            a = silver(a)
         h, w, _ = a.shape
         img = Image.fromarray((seamless(a) * 255 + 0.5).clip(0, 255).astype(np.uint8))
         img.save(OUT / f"{pid}.jpg", quality=82, optimize=True, progressive=True)

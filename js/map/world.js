@@ -1,11 +1,11 @@
-// 地図の土台。描画（影・後処理）、カメラ操作、地名、年と時代の見た目の切り替えをまとめる。
+// 地図の土台。描画（影・後処理）、カメラ操作、地名、年の切り替えをまとめる。
 // 描画の流れ：場面を半精度の下書き（MSAA 4倍）へ → 特別な場面だけ光のにじみ → grade.js で仕上げて画面へ。
 import * as THREE from 'three';
 import CameraControls from 'camera-controls';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { EraGradeShader } from './grade.js';
+import { GradeShader } from './grade.js';
 import { buildTerrain, buildWater, buildCoast, buildBorder } from './terrain.js';
 import { buildTrees, buildTown, buildRail, buildBridge } from './props.js';
 import { NOW_YEAR } from '../eras.js';
@@ -42,8 +42,6 @@ export const LABELS = [
   { t: '北九州空港', lat: 33.8459, lon: 131.0349, cls: 'small outer', from: 2006 },
 ];
 
-const luma = (c) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
-
 export async function createWorld(container, geo) {
   // ---------- 共通の uniform（地形・海・線・小物で同じものを参照する） ----------
   const shared = {
@@ -51,7 +49,6 @@ export async function createWorld(container, geo) {
     uYear: { value: NOW_YEAR },
     uBg: { value: new THREE.Color(0x1a2630) },
     uEdge: { value: new THREE.Vector4(geo.W / 2, geo.D / 2, 150, 0) },
-    uContour: { value: 1 },
     uNight: { value: 0 },
     uSunDir: { value: SUN_DIR.clone() },
     uFlow: { value: new THREE.Vector4() },
@@ -72,13 +69,12 @@ export async function createWorld(container, geo) {
   const bloom = new UnrealBloomPass(new THREE.Vector2(4, 4), 0.7, 0.45, 0.85);
   const bloomQuad = new FullScreenQuad(null);
   const grade = new THREE.ShaderMaterial({
-    name: 'EraGrade',
-    uniforms: THREE.UniformsUtils.clone(EraGradeShader.uniforms),
-    vertexShader: EraGradeShader.vertexShader,
-    fragmentShader: EraGradeShader.fragmentShader,
+    name: 'Grade',
+    uniforms: THREE.UniformsUtils.clone(GradeShader.uniforms),
+    vertexShader: GradeShader.vertexShader,
+    fragmentShader: GradeShader.fragmentShader,
     depthTest: false, depthWrite: false,
   });
-  grade.uniforms.uPal.value = new Float32Array(15);
   grade.uniforms.tDiffuse.value = sceneRT.texture;
   grade.uniforms.tBloom.value = bloom.renderTargetsHorizontal[0].texture;
   const gradeQuad = new FullScreenQuad(grade);
@@ -152,13 +148,14 @@ export async function createWorld(container, geo) {
   // ---------- カメラ操作 ----------
   const controls = new CameraControls(camera, renderer.domElement);
   const A = CameraControls.ACTION;
+  // 回せると操作が複雑になるので、向きは変えさせない。どのボタンのドラッグも移動、2本指は拡大・縮小と移動
   controls.mouseButtons.left = A.SCREEN_PAN;
-  controls.mouseButtons.right = A.ROTATE;
-  controls.mouseButtons.middle = A.ROTATE;
+  controls.mouseButtons.right = A.SCREEN_PAN;
+  controls.mouseButtons.middle = A.SCREEN_PAN;
   controls.mouseButtons.wheel = A.DOLLY;
   controls.touches.one = A.TOUCH_SCREEN_PAN;
-  controls.touches.two = A.TOUCH_DOLLY_ROTATE;
-  controls.touches.three = A.TOUCH_DOLLY_ROTATE;
+  controls.touches.two = A.TOUCH_DOLLY_SCREEN_PAN;
+  controls.touches.three = A.TOUCH_DOLLY_SCREEN_PAN;
   controls.dollyToCursor = true;
   controls.smoothTime = 0.25;
   controls.draggingSmoothTime = 0.1;
@@ -338,25 +335,12 @@ export async function createWorld(container, geo) {
   }
   new ResizeObserver(() => resize()).observe(container);
 
-  // ---------- 時代の見た目 ----------
+  // ---------- ミニチュア風のぼかし・年・夜 ----------
   function applyFx() {
     const pr = quality.pr;
     const cy = (safe.top + H - safe.bottom) / 2;
     const focus = fx.focus ?? 1 - cy / H;
     grade.uniforms.uTilt.value = [fx.tilt * pr, focus, fx.tilt > 3 ? 0.12 : 0.2];
-  }
-  let look = null;
-  function setLook(l) {
-    look = l;
-    const pal = [...l.pal].sort((a, b) => luma(a) - luma(b));
-    const arr = grade.uniforms.uPal.value;
-    pal.forEach((c, i) => arr.set(c, i * 3));
-    const u = grade.uniforms;
-    u.uTint.value = l.tint; u.uPrint.value = l.print; u.uMono.value = l.mono; u.uDark.value = l.dark; u.uSat.value = l.sat;
-    shared.uBg.value.setRGB(l.bg[0], l.bg[1], l.bg[2], THREE.SRGBColorSpace);
-    coast.material.opacity = 0.3 + 0.3 * l.print;
-    shared.uContour.value = 1 - 0.7 * l.print;
-    wake();
   }
   let year = NOW_YEAR;
   function setYear(y) {
@@ -462,8 +446,7 @@ export async function createWorld(container, geo) {
   // ---------- 毎コマ ----------
   const hooks = new Set();
   let last = performance.now(), started = last, lastWake = last, lastMove = last;
-  let time = 0, frameNo = 0, filmT = 0, scratchT = 0;
-  const film = { flicker: 1 };
+  let time = 0, frameNo = 0;
   function wake() { lastWake = performance.now(); }
 
   function degrade() {
@@ -472,28 +455,12 @@ export async function createWorld(container, geo) {
     if (quality.pr > 0.75) { quality.pr = Math.max(0.75, quality.pr - 0.25); resize(); }
   }
 
-  function render(dt) {
-    const u = grade.uniforms;
-    // フィルムの粒子・ちらつきは 1 秒 24 コマで変える
-    filmT += dt; scratchT += dt;
-    if (filmT >= 1 / 24) {
-      filmT %= 1 / 24;
-      u.uFrame.value = (u.uFrame.value + 1) % 4096;
-      film.flicker = 1 + (Math.random() - 0.5) * 0.07;
-      u.uFlicker.value = film.flicker;
-    }
-    if (scratchT > 0.4) {
-      scratchT = 0;
-      const s = u.uScratch.value;
-      for (let i = 0; i < 3; i++) s[i] = Math.random() < 0.25 ? 0.05 + Math.random() * 0.9 : -1;
-      s[3] = 0.25 + Math.random() * 0.25;
-    }
+  function render() {
     renderer.setRenderTarget(sceneRT);
     renderer.render(scene, camera);
     const useBloom = fx.bloom > 0 && quality.bloom;
     if (useBloom) runBloom(sceneRT.texture);
-    u.uBloom.value = useBloom ? fx.bloom : 0;
-    u.uTime.value = time;
+    grade.uniforms.uBloom.value = useBloom ? fx.bloom : 0;
     renderer.setRenderTarget(null);
     gradeQuad.render(renderer);
     labelRenderer.render(labelScene, camera);
@@ -515,7 +482,7 @@ export async function createWorld(container, geo) {
     // 動きが止まって 2 秒たったら 1 コマおきに描く
     const idle = now - Math.max(lastMove, lastWake) > 2000;
     frameNo++;
-    if (!idle || frameNo % 2 === 0) render(dt * (idle ? 2 : 1));
+    if (!idle || frameNo % 2 === 0) render();
     // 重いときは段階的に軽くする（最初の 3 秒と、タブ切り替え直後は数えない）
     if (!hiccup && now - started > 3000 && !idle) {
       if (dt > 0.024) quality.slowFor += dt; else quality.slowFor = Math.max(0, quality.slowFor - dt * 0.5);
@@ -538,6 +505,7 @@ export async function createWorld(container, geo) {
 
   // ---------- 視点を動かす ----------
   function view({ target, distance, polar, azimuth }, smooth = true) {
+    atHome = false; // 窓の大きさが変わっても、いつもの視点へ戻さない
     const t = new THREE.Vector3(...(Array.isArray(target) ? target : [target.x, target.y, target.z]));
     placeCamera(probe, t, polar ?? controls.polarAngle, azimuth ?? controls.azimuthAngle, distance ?? controls.distance);
     const p = probe.position;
@@ -547,6 +515,18 @@ export async function createWorld(container, geo) {
     atHome = true;
     controls.normalizeRotations();
     return controls.setLookAt(...homePosition(), home.target.x, home.target.y, home.target.z, smooth);
+  }
+  // ボタンで寄る・引く（k < 1 で寄る）。続けて押したときは、動いている途中でも行き先の距離から数える
+  const _sph = new THREE.Spherical();
+  function zoom(k, smooth = true) {
+    atHome = false;
+    wake();
+    return controls.dollyTo(controls.getSpherical(_sph).radius * k, smooth);
+  }
+  // その向きにまだ動けるか（行き先が近さ・遠さの端に着いていたら false）
+  function canZoom(k) {
+    const r = controls.getSpherical(_sph).radius;
+    return k < 1 ? r > controls.minDistance + 0.5 : r < controls.maxDistance - 0.5;
   }
   function at(lon, lat, lift = 0) {
     const [x, z] = geo.toXZ(lon, lat);
@@ -568,10 +548,10 @@ export async function createWorld(container, geo) {
   const world = {
     THREE, geo, renderer, scene, camera, controls, shared, fxRoot, sun, hemi, labelScene, pinScene,
     layers: { labels: labelRenderer.domElement, pins: pinRenderer.domElement },
-    get year() { return year; }, get look() { return look; }, get size() { return { W, H }; },
+    get year() { return year; }, get size() { return { W, H }; },
     get home() { return home; }, get quality() { return quality; }, get safe() { return { ...safe }; },
-    setYear, setLook, setNight, setFx, setSafeArea, focusShadow,
-    project, toGround, at, view, goHome, wake, pause,
+    setYear, setNight, setFx, setSafeArea, focusShadow,
+    project, toGround, at, view, goHome, zoom, canZoom, wake, pause,
     onFrame(f) { hooks.add(f); return () => hooks.delete(f); },
     distance: () => controls.distance,
     // f() は地名を消したい画面上の四角 [x0, y0, x1, y1] の配列を返す
