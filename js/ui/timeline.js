@@ -8,6 +8,7 @@ const CLOSE_DELAY = 300; // 離れてから閉じるまで
 const AIM_DELAY = 200;   // 小窓へ斜めに向かっている間は、行の切り替えを待つ
 const EVENT_GAP = 20;    // 主なできごとの行どうしの最小間隔
 const ERA_GAP = 15;      // 時代名どうしの最小間隔
+const DETAIL_HEAD = 30;  // くわしい年表の上に貼りつく時代名の高さ（行をこの下に出す）
 
 export function createTimeline(app, { major = [], detail = [] }) {
   const nav = document.getElementById('timeline');
@@ -185,9 +186,9 @@ export function createTimeline(app, { major = [], detail = [] }) {
     app.animateT(to());
   });
 
-  // ---------- 門司のくわしい年表（小窓） ----------
+  // ---------- 門司のくわしい年表（小窓）：左の年表と同じく上が新しい。同じ年はデータの順（古い順）を逆にする ----------
   let lastEra = null;
-  for (const d of [...detail].filter((d) => Number.isFinite(d.year)).sort((a, b) => a.year - b.year)) {
+  for (const d of [...detail].filter((d) => Number.isFinite(d.year)).sort((a, b) => a.year - b.year).reverse()) {
     const e = ERA_BY_ID[d.era] ?? eraAtYear(d.year);
     if (e !== lastEra) {
       lastEra = e;
@@ -205,22 +206,34 @@ export function createTimeline(app, { major = [], detail = [] }) {
     scroll.append(row);
     rows.push({ d, row });
   }
-
-  let open = false, openTimer = 0, closeTimer = 0, aimTimer = 0, pendingY = 0, pendingYear = null, prevPt = null, hotRow = null;
-  const setOpen = (v) => { open = v; box.classList.toggle('is-open', v); };
-  // 指している年の行を、ポインターと同じ高さへ
-  function focusYear(year, clientY, smooth) {
-    if (!rows.length) return;
-    let best = rows[0];
-    for (const r of rows) { if (r.d.year <= year + 0.5) best = r; else break; }
-    if (hotRow !== best.row) { hotRow?.classList.remove('is-hot'); hotRow = best.row; hotRow.classList.add('is-hot'); }
-    const top = best.row.offsetTop + best.row.offsetHeight / 2 - (clientY - scroll.getBoundingClientRect().top);
-    scroll.scrollTo({ top: Math.max(0, top), behavior: smooth ? 'smooth' : 'instant' });
+  // 主なできごとごとに、小窓で光らせる行を決めておく。同じ年の行のうち、出典と言葉（2文字ずつ）がいちばん重なる行
+  const pairs = (s) => new Set(Array.from({ length: s.length - 1 }, (_, i) => s.slice(i, i + 2)));
+  for (const it of events) {
+    const urls = new Set((it.ev.sources ?? []).map((s) => s.url)), words = pairs(it.ev.label);
+    let score = -1;
+    for (const r of rows) {
+      if (r.d.year !== it.ev.year) continue;
+      const sc = 2 * (r.d.sources ?? []).filter((s) => urls.has(s.url)).length + [...pairs(r.d.text)].filter((p) => words.has(p)).length;
+      if (sc > score) { score = sc; it.row = r; }
+    }
   }
-  const yearAt = (e) => {
+
+  let open = false, openTimer = 0, closeTimer = 0, aimTimer = 0, pendingY = 0, pendingAim = null, prevPt = null, hotRow = null;
+  const setOpen = (v) => { open = v; box.classList.toggle('is-open', v); };
+  // 指している行（主なできごとならその行、ほかはその年までで、いちばん新しいできごと）を、ポインターと同じ高さへ。
+  // 小窓より上や下を指したときも、行は上に貼りつく時代名の下から小窓の下端までに収める
+  function focusAt({ year, row }, clientY, smooth) {
+    if (!rows.length) return;
+    const best = row ?? rows.find((r) => r.d.year <= year + 0.5) ?? rows.at(-1);
+    if (hotRow !== best.row) { hotRow?.classList.remove('is-hot'); hotRow = best.row; hotRow.classList.add('is-hot'); }
+    const half = best.row.offsetHeight / 2;
+    const y = clamp(clientY - scroll.getBoundingClientRect().top, DETAIL_HEAD + half, scroll.clientHeight - half - 8);
+    scroll.scrollTo({ top: Math.max(0, best.row.offsetTop + half - y), behavior: smooth ? 'smooth' : 'instant' });
+  }
+  const aimAt = (e) => {
     const li = e.target.closest('.tl-major li');
     const it = li && events.find((x) => x.li === li);
-    return it ? it.ev.year : tToYear(tOf(e.clientY - nav.getBoundingClientRect().top));
+    return it ? { year: it.ev.year, row: it.row } : { year: tToYear(tOf(e.clientY - nav.getBoundingClientRect().top)) };
   };
   // 前の位置から小窓の左端の上下の角へ引いた三角形の中を、右へ進んでいるか
   function aimingAtBox(p) {
@@ -237,15 +250,15 @@ export function createTimeline(app, { major = [], detail = [] }) {
   majorList.addEventListener('pointermove', (e) => {
     if (e.pointerType === 'touch' || !rows.length) return;
     clearTimeout(closeTimer);
-    const year = yearAt(e), y = e.clientY;
+    const aim = aimAt(e), y = e.clientY;
     if (!open) {
-      pendingYear = year; pendingY = y;
-      if (!openTimer) openTimer = setTimeout(() => { openTimer = 0; setOpen(true); focusYear(pendingYear, pendingY, false); }, OPEN_DELAY);
+      pendingAim = aim; pendingY = y;
+      if (!openTimer) openTimer = setTimeout(() => { openTimer = 0; setOpen(true); focusAt(pendingAim, pendingY, false); }, OPEN_DELAY);
       return;
     }
     clearTimeout(aimTimer);
-    if (aimingAtBox({ x: e.clientX, y })) aimTimer = setTimeout(() => focusYear(year, y, true), AIM_DELAY);
-    else focusYear(year, y, true);
+    if (aimingAtBox({ x: e.clientX, y })) aimTimer = setTimeout(() => focusAt(aim, y, true), AIM_DELAY);
+    else focusAt(aim, y, true);
   });
   const stay = () => clearTimeout(closeTimer);
   const leave = () => {
