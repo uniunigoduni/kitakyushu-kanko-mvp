@@ -3,7 +3,7 @@
 import { loadGeo } from './map/geo.js';
 import { createWorld } from './map/world.js';
 import { NOW_YEAR, ERAS, ERA_BY_ID, eraIndexAtT, accentAtT, tToYear, yearToT, toCss } from './eras.js';
-import { clamp, easeInOut, reducedMotion } from './util.js';
+import { clamp, easeInOut, reducedMotion, sceneAt } from './util.js';
 import { createTitle } from './ui/title.js';
 import { createTimeline } from './ui/timeline.js';
 import { createBand } from './ui/band.js';
@@ -70,8 +70,17 @@ if (geoResult instanceof Error) {
 if (world) start(world, sitesData?.sites ?? [], arData);
 
 function start(world, sites, arData) {
-  // 360度の画像がある史跡にだけ「ARで探検」を出す
+  // 360度の画像がある史跡にだけ「ARで探検」を出す。
+  // 時代ごとの場面がある史跡（巌流島）は、いまの年の場面を s.pano にして、年を動かすと入れ替える
+  const sceneSites = [];
   for (const s of sites) {
+    const scenes = arData?.views?.[s.id]?.scenes?.filter((c) => arData.panos?.[c.pano]);
+    if (scenes?.length) {
+      s.scenes = scenes;
+      s.pano = sceneAt(s, NOW_YEAR).pano;
+      sceneSites.push(s);
+      continue;
+    }
     const pano = arData?.sites?.[s.id];
     if (pano && arData.panos?.[pano]) s.pano ??= pano;
   }
@@ -114,6 +123,10 @@ function start(world, sites, arData) {
       app.emit('era', era, prev);
     }
     title.setYear(app.year);
+    for (const s of sceneSites) {
+      const c = sceneAt(s, app.year);
+      if (c.pano !== s.pano) { s.pano = c.pano; app.emit('scene', s, c); }
+    }
     app.emit('t', t);
   }
 
@@ -194,7 +207,7 @@ function start(world, sites, arData) {
   app.openPay = (s) => pay.open(s);
   // 吹き出しを開いたら、360度の画像を先に読み込んでおく
   app.on('select', (s) => { if (s.pano) ar.preload(s.pano).catch(() => {}); });
-  createBand(app, sites);
+  createBand(app, sites.filter((s) => !s.dummy)); // ダミーのピンは一覧に出さない
   createTimeline(app, { major, detail });
   createFlavor(app);
 

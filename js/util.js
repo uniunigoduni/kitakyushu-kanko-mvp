@@ -26,6 +26,9 @@ export function svg(tag, attrs = {}) {
   return el;
 }
 
+// 時代ごとの場面がある史跡（巌流島）の、年 y の場面：始まりの年（from）が y 以下のうち最後のもの
+export const sceneAt = (s, y) => s.scenes.reduce((c, x) => (y >= x.from ? x : c), s.scenes[0]);
+
 // 年の見出し（「前14000年」「1914年」）
 export const yearText = (label) => (/[年頃紀]/.test(label) ? label : `${label}年`);
 

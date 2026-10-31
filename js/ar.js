@@ -1,5 +1,6 @@
 // 「ARで探検」：横長の360度画像を円筒の内側に貼り、円の真ん中に固定したカメラの向きをドラッグで変えて眺める。
 // 見どころには丸を描き、丸から線を伸ばした先に四角い枠で説明を出す（丸・線・枠はどれも3D空間に置く）。左上に「地図へ戻る」。
+// 時代ごとの場面がある史跡（巌流島）は、右の端に時代の一覧を出し、同じ向きのまま別の時代の画像に入れ替える。
 import * as THREE from 'three';
 import { Line2 } from 'three/addons/lines/Line2.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
@@ -19,6 +20,11 @@ const KEY_STEP = 0.26; // 矢印キー1回で向きを変える角度（約15°�
 const ARROWS = { ArrowLeft: [1, 0], ArrowRight: [-1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] };
 const FIND_MS = 1400;  // 開いてから、まだ見ていない見どころの方向の矢印を出すまで（最初に見える見どころを描き終えてから）
 const FIND_GAP = 50;   // 方向の矢印どうしが重ならないように空ける間（px）
+const FADE_MS = 700;   // 時代を切り替えるとき、前の画像から次の画像へ移る時間
+const ERAS_HOT = 72;   // 画面の右の端からこの幅にマウスが来たら、時代の一覧を出す（px）
+const ERAS_LEAVE = 250; // 一覧からマウスが離れてから閉じるまで（ms）
+const PEEK_AT = 900, PEEK_MS = 1800; // 初めて開いたとき、一覧があることを知らせるために少しの間だけ出す
+let peeked = false;
 
 // gl_FragCoord は環境によって正しい値にならなかったので、画面の位置は頂点から渡す
 const vertexShader = /* glsl */`
@@ -29,16 +35,20 @@ const vertexShader = /* glsl */`
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     vClip = gl_Position.xyw;
   }`;
-// 画像は周辺を少し落とすだけ（時代ごとのフィルターはかけない）
+// 画像は周辺を少し落とすだけ（時代ごとのフィルターはかけない）。時代を切り替える間は map から map2 へ混ぜていく
 const fragmentShader = /* glsl */`
   uniform sampler2D map;
+  uniform sampler2D map2;
+  uniform float uMix;
   uniform vec2 uRes;
   varying vec2 vUv;
   varying vec3 vClip;
   float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   void main() {
     // 円筒の内側から見ると左右が逆になるので、横を反転して読む
-    gl_FragColor = texture2D(map, vec2(1.0 - vUv.x, vUv.y));
+    vec2 st = vec2(1.0 - vUv.x, vUv.y);
+    gl_FragColor = texture2D(map, st);
+    if (uMix > 0.0) gl_FragColor = mix(gl_FragColor, texture2D(map2, st), uMix);
     #include <colorspace_fragment>
     vec3 c = gl_FragColor.rgb;
     vec2 uv = vClip.xy / vClip.z * 0.5 + 0.5; // 画面の中の位置（左下0・右上1）
@@ -104,16 +114,22 @@ export function createAR(app, world, data) {
     const coarse = matchMedia('(pointer: coarse)').matches;
     const stage = h('div', { class: 'ar-stage', tabindex: 0, role: 'img', 'aria-label': '360度の想像図。ドラッグか矢印キーで見回せます' });
     const back = h('button', { class: 'ar-back', type: 'button', onclick: () => close() }, icon('M15 5l-7 7 7 7'), h('span', { text: '地図へ戻る' }));
-    const caption = h('p', { class: 'ar-caption' }, h('b', { id: 'ar-name', text: pinLabel(s.name) }), h('span', { text: '想像図（AIで生成）' }));
+    const scenes = s.scenes?.length > 1 ? s.scenes : null;
+    let cur = scenes ? scenes.find((c) => c.pano === s.pano) ?? scenes[0] : null; // いま見ている場面（選んだ時点で切り替える）
+    let shown = cur;                                          // 画像まで入れ替え終わった場面
+    const sceneLine = scenes && h('span', { class: 'ar-scene', 'aria-live': 'polite' });
+    const caption = h('p', { class: 'ar-caption' }, h('b', { id: 'ar-name', text: pinLabel(s.name) }), sceneLine, h('span', { text: '想像図（AIで生成）' }));
     const hint = h('p', { class: 'ar-hint', 'aria-hidden': 'true' }, icon('M4 12h16M8 8l-4 4 4 4M16 8l4 4-4 4'), h('span', { text: coarse ? '指でなぞって見回す' : 'ドラッグして見回す' }));
-    const finds = cfg.spots.map((_, i) => h('button', { class: 'ar-find', type: 'button', hidden: true, 'aria-label': `見どころ${i + 1}の方を向く`, title: '見どころの方を向く' }, icon('M5 12h14M13 6l6 6-6 6')));
-    const list = h('ul', { class: 'sr-only', 'aria-label': '見どころ' }, cfg.spots.map((sp) => h('li', { text: sp.text })));
+    const list = h('ul', { class: 'sr-only', 'aria-label': '見どころ' });
     const shade = h('div', { class: 'ar-shade' });
-    const el = h('div', { class: 'ar', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'ar-name' }, shade, stage, back, caption, hint, finds, list);
+    const stamp = scenes && h('p', { class: 'ar-stamp', 'aria-hidden': 'true' });
+    const el = h('div', { class: 'ar', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'ar-name' }, shade, stage, back, caption, hint, list, stamp);
+    const eras = scenes && erasPanel();
+    if (eras) { el.append(eras.nav); markScene(); }
     document.body.append(el);
 
-    const v = { yaw: 0, pitch: 0, vel: [0, 0], goal: null, tween: null, drag: null, W: 0, H: 0, f: 1, pitchMax: 0, mode: '', edge: null, finding: false, dirty: true, ready: false, closed: false };
-    let clone = null, grow = null, texture = null, ro = null, hintTimer = 0, findTimer = 0;
+    const v = { yaw: 0, pitch: 0, vel: [0, 0], goal: null, tween: null, drag: null, W: 0, H: 0, f: 1, pitchMax: 0, mode: '', edge: null, finding: false, hold: 0, fade: null, own: false, dirty: true, ready: false, closed: false };
+    let clone = null, grow = null, texture = null, ro = null, hintTimer = 0, findTimer = 0, aimTimer = 0, switching = 0;
     const entry = { close };
     app.overlays.push(entry);
     appRoot.inert = true;
@@ -126,63 +142,156 @@ export function createAR(app, world, data) {
 
     // ---------- 円筒と見どころ ----------
     const scene = new THREE.Scene();
-    const u = { map: { value: null }, uRes: { value: new THREE.Vector2(1, 1) } };
+    const u = { map: { value: null }, map2: { value: null }, uMix: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) } };
     scene.add(new THREE.Mesh(new THREE.CylinderGeometry(R, R, IH, 128, 1, true),
       new THREE.ShaderMaterial({ uniforms: u, vertexShader, fragmentShader, side: THREE.BackSide, depthWrite: false })));
 
-    const spots = cfg.spots.map((sp, i) => {
-      // 下に黒い縁取り（太く薄く）、上に白い線
-      const mats = [
-        new LineMaterial({ color: 0x000000, linewidth: 6, transparent: true, opacity: 0.35, depthTest: false, depthWrite: false }),
-        new LineMaterial({ color: 0xffffff, linewidth: 2.5, transparent: true, depthTest: false, depthWrite: false }),
-      ];
-      const lines = mats.map((m, i) => { const l = new Line2(undefined, m); l.renderOrder = i + 1; l.visible = false; scene.add(l); return l; });
-      const box = h('div', { class: 'ar-note-box' }, h('p', { text: sp.text }));
-      const label = new CSS2DObject(h('div', { class: 'ar-note' }, box));
-      scene.add(label);
-      const spot = { ...sp, mats, lines, box, label, find: finds[i], center: toWorld(sp.u * IW, sp.v * IH), L: 0, ring: 0, t0: null, done: false };
-      spot.find.addEventListener('click', () => face(spot));
-      return spot;
-    });
+    // 見どころ（時代を切り替えたら、前の場面のものを片付けて作り直す）
+    let spots = [];
+    function buildSpots() {
+      for (const sp of spots) {
+        for (const l of sp.lines) scene.remove(l);
+        for (const g of new Set(sp.lines.map((l) => l.geometry))) g.dispose();
+        for (const m of sp.mats) m.dispose();
+        scene.remove(sp.label); // 外すと説明の枠の要素も消える
+        if (document.activeElement === sp.find) stage.focus({ preventScroll: true });
+        sp.find.remove();
+      }
+      spots = cfg.spots.map((sp, i) => {
+        // 下に黒い縁取り（太く薄く）、上に白い線
+        const mats = [
+          new LineMaterial({ color: 0x000000, linewidth: 6, transparent: true, opacity: 0.35, depthTest: false, depthWrite: false }),
+          new LineMaterial({ color: 0xffffff, linewidth: 2.5, transparent: true, depthTest: false, depthWrite: false }),
+        ];
+        const lines = mats.map((m, j) => { const l = new Line2(undefined, m); l.renderOrder = j + 1; l.visible = false; scene.add(l); return l; });
+        const box = h('div', { class: 'ar-note-box' }, h('p', { text: sp.text }));
+        const label = new CSS2DObject(h('div', { class: 'ar-note' }, box));
+        scene.add(label);
+        const find = h('button', { class: 'ar-find', type: 'button', hidden: true, 'aria-label': `見どころ${i + 1}の方を向く`, title: '見どころの方を向く' }, icon('M5 12h14M13 6l6 6-6 6'));
+        // side：枠を出す側（layout で決める）、ax：上下に出す枠の、線を付ける横の位置（0〜1）
+        const spot = { ...sp, mats, lines, box, label, find, center: toWorld(sp.u * IW, sp.v * IH), side: '', ax: 0.5, L: 0, ring: 0, t0: null, done: false };
+        find.addEventListener('click', () => face(spot));
+        return spot;
+      });
+      list.before(...spots.map((sp) => sp.find));
+      list.replaceChildren(...cfg.spots.map((sp) => h('li', { text: sp.text })));
+      if (v.mode) layout();
+    }
+    buildSpots();
 
     // 丸は線を伸ばす向きから描き始めて一周し、そのまま線を伸ばす。
-    // 横長の画面では斜めに出てから水平に折れて枠へ、縦長の画面では真上か真下へまっすぐ伸ばす
+    // 枠を出す側（side）：l・r は斜めに出てから水平に折れて丸の左右の枠へ、u・d は真上か真下へまっすぐ伸ばす。
+    // 横長の画面はデータで決めた左右、縦長の画面は上下から始め、描き始めるときに画面に収まる側を選び直す（placeNotes）
+    const vertical = (side) => side === 'u' || side === 'd';
+    const homeSide = (sp) => (v.mode === 'stack' ? (sp.to[1] < 0 ? 'u' : 'd') : sp.to[0] < 0 ? 'l' : 'r');
+    const lineEnd = (sp, side) => {
+      const cx = sp.u * IW, cy = sp.v * IH;
+      return vertical(side)
+        ? [cx, cy + (side === 'u' ? -1 : 1) * (sp.r + LIFT)]
+        : [cx + (side === 'r' ? 1 : -1) * Math.max(Math.abs(sp.to[0]), sp.r + 44), cy + sp.to[1]];
+    };
     function layout() {
-      for (const sp of spots) {
-        const cx = sp.u * IW, cy = sp.v * IH, r = sp.r;
-        let end, elbow = null;
-        if (v.mode === 'stack') {
-          const up = sp.to[1] < 0;
-          end = [cx, cy + (up ? -1 : 1) * (r + LIFT)];
-          sp.label.center.set(0.5, up ? 1 : 0);
-        } else {
-          const sx = sp.to[0] < 0 ? -1 : 1;
-          end = [cx + sx * Math.max(Math.abs(sp.to[0]), r + 44), cy + sp.to[1]];
-          elbow = [end[0] - sx * ELBOW, end[1]];
-          sp.label.center.set(sx > 0 ? 0 : 1, 0.5);
-        }
-        const aim = elbow ?? end;
-        const a0 = Math.atan2(aim[1] - cy, aim[0] - cx);
-        const pts = [];
-        for (let i = 0; i <= 64; i++) {
-          const a = a0 + (i / 64) * Math.PI * 2;
-          pts.push(toWorld(cx + r * Math.cos(a), cy + r * Math.sin(a)));
-        }
-        if (elbow) pts.push(toWorld(...elbow));
-        pts.push(toWorld(...end));
-        sp.L = 0;
-        for (let i = 1; i < pts.length; i++) {
-          sp.L += pts[i].distanceTo(pts[i - 1]);
-          if (i === 64) sp.ring = sp.L;
-        }
-        const geo = new LineGeometry().setPositions(pts.flatMap((p) => [p.x, p.y, p.z]));
-        for (const old of new Set(sp.lines.map((l) => l.geometry))) old.dispose();
-        for (const l of sp.lines) l.geometry = geo;
-        sp.lines[1].computeLineDistances();
-        for (const m of sp.mats) { m.dashSize = sp.L; m.gapSize = sp.L + 1; }
-        sp.label.position.copy(pts.at(-1));
-        paint(sp, performance.now());
+      for (const sp of spots) { sp.side = homeSide(sp); sp.ax = 0.5; layoutSpot(sp); }
+    }
+    function layoutSpot(sp) {
+      const cx = sp.u * IW, cy = sp.v * IH, r = sp.r;
+      const end = lineEnd(sp, sp.side);
+      let elbow = null;
+      if (vertical(sp.side)) sp.label.center.set(sp.ax, sp.side === 'u' ? 1 : 0);
+      else {
+        const sx = sp.side === 'r' ? 1 : -1;
+        elbow = [end[0] - sx * ELBOW, end[1]];
+        sp.label.center.set(sx > 0 ? 0 : 1, 0.5);
       }
+      const aim = elbow ?? end;
+      const a0 = Math.atan2(aim[1] - cy, aim[0] - cx);
+      const pts = [];
+      for (let i = 0; i <= 64; i++) {
+        const a = a0 + (i / 64) * Math.PI * 2;
+        pts.push(toWorld(cx + r * Math.cos(a), cy + r * Math.sin(a)));
+      }
+      if (elbow) pts.push(toWorld(...elbow));
+      pts.push(toWorld(...end));
+      sp.L = 0;
+      for (let i = 1; i < pts.length; i++) {
+        sp.L += pts[i].distanceTo(pts[i - 1]);
+        if (i === 64) sp.ring = sp.L;
+      }
+      const geo = new LineGeometry().setPositions(pts.flatMap((p) => [p.x, p.y, p.z]));
+      for (const old of new Set(sp.lines.map((l) => l.geometry))) old.dispose();
+      for (const l of sp.lines) l.geometry = geo;
+      sp.lines[1].computeLineDistances();
+      for (const m of sp.mats) { m.dashSize = sp.L; m.gapSize = sp.L + 1; }
+      sp.label.position.copy(pts.at(-1));
+      paint(sp, performance.now());
+    }
+
+    // 描き始める見どころの枠を、画面からはみ出さず、ほかの枠や丸に重ならない側に置く。
+    // 時代を切り替えると前の場面の向きのまま見どころが入ってくるので、データで決めた側では端で切れることがある。
+    // 置き方の組み合わせ（1つの見どころに 2〜4 通り、同時に描き始めるのは多くて 3 つ）を全部くらべて、いちばん良いものにする
+    const scr = new THREE.Vector3();
+    function screenOf(x, y) {
+      scr.copy(toWorld(x, y)).project(camera);
+      return scr.z < 1 ? [((scr.x + 1) / 2) * v.W, ((1 - scr.y) / 2) * v.H] : null;
+    }
+    const overlap = (a, b) => Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])) * Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1]));
+    function placeNotes(fresh) {
+      const L = 8, Rt = v.W - 8, T = 8, B = v.H - 8;
+      // 「地図へ戻る」・題名・時代の一覧のつまみには重ねない（少し余白をとる）
+      const blocks = [back, caption, eras?.tab].filter(Boolean).map((b) => { const r = b.getBoundingClientRect(); return [r.left - 6, r.top - 6, r.right + 6, r.bottom + 6]; });
+      // 枠の四角（画面の px）。縦に出す枠は、画面の内側に収まるように線を付ける位置（ax）を左右にずらす
+      function noteRect(sp, side) {
+        const w = sp.box.offsetWidth || 240, nh = sp.box.offsetHeight || 130;
+        const e = screenOf(...lineEnd(sp, side));
+        if (!e) return null;
+        const [ex, ey] = e;
+        if (side === 'l') return { r: [ex - w, ey - nh / 2, ex, ey + nh / 2] };
+        if (side === 'r') return { r: [ex, ey - nh / 2, ex + w, ey + nh / 2] };
+        const right = Rt - (eras ? eras.tabW() : 0); // 上下に出す枠は、右の端のつまみの手前までに収める
+        const ax = clamp(clamp(0.5, 1 - (right - ex) / w, (ex - L) / w), 0.12, 0.88), x0 = ex - w * ax;
+        return { ax, r: side === 'u' ? [x0, ey - nh, x0 + w, ey] : [x0, ey, x0 + w, ey + nh] };
+      }
+      const rings = [];
+      for (const sp of spots) {
+        const cx = sp.u * IW, cy = sp.v * IH, a = screenOf(cx - sp.r, cy - sp.r), b = screenOf(cx + sp.r, cy + sp.r);
+        if (a && b) rings.push({ sp, r: [Math.min(a[0], b[0]), a[1], Math.max(a[0], b[0]), b[1]] });
+      }
+      const fixed = spots.filter((sp) => sp.t0 != null).map((sp) => noteRect(sp, sp.side)?.r).filter(Boolean);
+      const opts = fresh.map((sp) => {
+        const home = homeSide(sp);
+        const sides = v.mode === 'stack' ? ['u', 'd'] : ['l', 'r', 'u', 'd'];
+        sides.sort((a, b) => (b === home) - (a === home) || (vertical(a) === vertical(home) ? -1 : 0) - (vertical(b) === vertical(home) ? -1 : 0));
+        return sides.map((side, i) => {
+          const o = noteRect(sp, side);
+          if (!o) return null;
+          const [x0, y0, x1, y1] = o.r;
+          // はみ出し（px）は重く、決めた側から変えるのは少しだけ損にする
+          let cost = [0, 30, 60, 70][i] + 4 * (Math.max(0, L - x0) + Math.max(0, x1 - Rt) + Math.max(0, T - y0) + Math.max(0, y1 - B));
+          for (const g of rings) if (g.sp !== sp) { const a = overlap(o.r, g.r); if (a > 0) cost += 500 + a / 50; }
+          for (const b of blocks) { const a = overlap(o.r, b); if (a > 0) cost += 800 + a / 20; }
+          for (const f of fixed) { const a = overlap(o.r, f); if (a > 0) cost += 2000 + a / 50; }
+          return { side, ...o, cost };
+        }).filter(Boolean);
+      });
+      let best = null, bestCost = Infinity;
+      const pick = [];
+      (function walk(i, acc) {
+        if (acc >= bestCost) return;
+        if (i === fresh.length) { bestCost = acc; best = pick.slice(); return; }
+        for (const o of opts[i]) {
+          let c = acc + o.cost;
+          for (let j = 0; j < i; j++) { const a = overlap(o.r, pick[j].r); if (a > 0) c += 2000 + a / 50; }
+          pick[i] = o;
+          walk(i + 1, c);
+        }
+      })(0, 0);
+      fresh.forEach((sp, i) => {
+        const o = best?.[i];
+        if (!o) return;
+        sp.side = o.side;
+        sp.ax = o.ax ?? 0.5;
+        layoutSpot(sp);
+      });
     }
 
     // 描き込み：丸を 300ms、線を 250ms で引いてから枠を出す。破線の「線の部分」を伸ばして描く
@@ -200,20 +309,25 @@ export function createAR(app, world, data) {
     // 見どころの真ん中が初めて画面の内側に入ったら描き始める（同時に入ったものは少しずつずらす）
     const ndc = new THREE.Vector3();
     function trigger(now) {
-      let n = 0;
-      for (const sp of spots) {
-        if (sp.t0 != null) continue;
+      if (now < v.hold) return;
+      const fresh = spots.filter((sp) => {
+        if (sp.t0 != null) return false;
         ndc.copy(sp.center).project(camera);
-        if (ndc.z > 1 || Math.abs(ndc.x) > 0.8 || Math.abs(ndc.y) > 0.8) continue;
-        sp.t0 = now + 120 + n++ * 220;
+        return ndc.z <= 1 && Math.abs(ndc.x) <= 0.8 && Math.abs(ndc.y) <= 0.8;
+      });
+      if (!fresh.length) return;
+      placeNotes(fresh);
+      fresh.forEach((sp, n) => {
+        sp.t0 = now + 120 + n * 220;
         if (rm) sp.done = true;
         paint(sp, now);
-      }
+      });
     }
 
     // まだ描いていない見どころは、画面の端にその方向を指す矢印を出す（押すとその方を向く）
     function edges() {
-      const e = v.edge, cx = v.W / 2, cy = v.H / 2, placed = [];
+      const e = v.edge && eras?.open ? { ...v.edge, r: v.edge.rOpen } : v.edge;
+      const cx = v.W / 2, cy = v.H / 2, placed = [];
       for (const sp of spots) {
         const off = !v.finding || !e || sp.t0 != null;
         if (sp.find.hidden !== off) {
@@ -244,14 +358,14 @@ export function createAR(app, world, data) {
 
     // 見どころの丸と説明の枠がまとめて画面の真ん中に入る向き（画像の割合）
     function aimAt(sp) {
-      if (v.mode === 'stack') return [sp.u, sp.v + ((sp.to[1] < 0 ? -1 : 1) * (LIFT + NOTE_H)) / 2 / IH];
+      if (vertical(sp.side)) return [sp.u, sp.v + ((sp.side === 'u' ? -1 : 1) * (LIFT + NOTE_H)) / 2 / IH];
       // 丸の中心から枠の真ん中まで。枠の幅は 240px として、画像の px に直す
       const reach = Math.max(Math.abs(sp.to[0]), sp.r + 44) + 120 / (v.f / R);
-      return [sp.u + ((sp.to[0] < 0 ? -1 : 1) * reach) / 2 / IW, sp.v + sp.to[1] / 2 / IH];
+      return [sp.u + ((sp.side === 'r' ? 1 : -1) * reach) / 2 / IW, sp.v + sp.to[1] / 2 / IH];
     }
 
     // 方向の矢印を押したら、その見どころの方へなめらかに向きを変える（遠いほど少し長く）
-    function face(sp) {
+    function face(sp, auto = false) {
       const [tu, tv] = aimAt(sp);
       let yaw = yawOf(tu);
       yaw += Math.round((v.yaw - yaw) / (Math.PI * 2)) * Math.PI * 2;
@@ -260,11 +374,31 @@ export function createAR(app, world, data) {
       v.goal = null;
       v.tween = null;
       if (rm) { v.yaw = yaw; v.pitch = pitch; }
-      else v.tween = { from: [v.yaw, v.pitch], to: [yaw, pitch], t0: performance.now(), ms: clamp(300 + 350 * Math.hypot(yaw - v.yaw, pitch - v.pitch), 300, 1200) };
+      else {
+        v.tween = { from: [v.yaw, v.pitch], to: [yaw, pitch], t0: performance.now(), ms: clamp(300 + 350 * Math.hypot(yaw - v.yaw, pitch - v.pitch), 300, 1200) };
+        // 向き終わってから説明の枠を置く（動いている途中の向きで置くと、止まったときに端へ寄ってしまう）
+        v.hold = Math.max(v.hold, v.tween.t0 + v.tween.ms);
+      }
       v.dirty = true;
+      if (auto) return;
       hideHint();
       // 押した矢印は見どころが描かれると消えるので、キーボードの操作は画面に移しておく
       if (document.activeElement === sp.find) stage.focus({ preventScroll: true });
+    }
+
+    // 時代を切り替えて、新しい見どころが1つも画面に入っていなければ、いちばん近いものの方を向く
+    // （細い画面で起きやすい。自分で向きを変えた後は、同じ所を見比べられるようにそのままにする）
+    function aimNearest() {
+      if (v.own || v.drag || spots.some((sp) => sp.t0 != null)) return;
+      let best = null, bd = Infinity;
+      for (const sp of spots) {
+        const [tu, tv] = aimAt(sp);
+        let dyaw = yawOf(tu) - v.yaw;
+        dyaw -= Math.round(dyaw / (Math.PI * 2)) * Math.PI * 2;
+        const d = Math.hypot(dyaw, pitchOf(tv) - v.pitch);
+        if (d < bd) { bd = d; best = sp; }
+      }
+      if (best) face(best, true);
     }
 
     // ---------- 画面の大きさ ----------
@@ -292,6 +426,11 @@ export function createAR(app, world, data) {
       // 方向の矢印の真ん中を置ける範囲：左右は「地図へ戻る」と題名の外側に合わせ、上はその下、下は操作の案内の下の端まで
       const rb = back.getBoundingClientRect(), rc = caption.getBoundingClientRect(), rh = hint.getBoundingClientRect();
       v.edge = { l: rb.left + 22, r: rc.right - 22, t: Math.max(rb.bottom, rc.bottom) + 8 + 22, b: rh.bottom - 22 };
+      // 時代の一覧があるときは、右の端のつまみ（開いているときは一覧）にかからないようにする
+      if (eras) {
+        v.edge.r = Math.min(v.edge.r, W - eras.tabW() - 8 - 22);
+        v.edge.rOpen = Math.min(v.edge.r, W - eras.openW() - 8 - 22);
+      }
       const mode = aspect < STACK ? 'stack' : 'side';
       if (mode !== v.mode) { v.mode = mode; layout(); }
       v.dirty = true;
@@ -301,7 +440,7 @@ export function createAR(app, world, data) {
     ro.observe(stage);
 
     // 最初に向く所：横長の画面は画像ごとの決めた向き、縦長の画面は最初の見どころ（丸と枠がまとめて入るように）
-    const [u0, v0] = v.mode === 'stack' ? aimAt(cfg.spots[0]) : cfg.view;
+    const [u0, v0] = v.mode === 'stack' ? aimAt(spots[0]) : cfg.view;
     v.yaw = yawOf(u0);
     v.pitch = clamp(pitchOf(v0), -v.pitchMax, v.pitchMax);
 
@@ -342,6 +481,7 @@ export function createAR(app, world, data) {
         renderer.compile(scene, camera);
       }
       renderer.initTexture(texture);
+      if (v.fade) renderer.initTexture(v.fade.next);
     }
 
     // ---------- 描く ----------
@@ -382,6 +522,13 @@ export function createAR(app, world, data) {
         if (Math.abs(v.goal[0] - v.yaw) + Math.abs(v.goal[1] - v.pitch) < 1e-3) { [v.yaw, v.pitch] = v.goal; v.goal = null; }
         v.dirty = true;
       }
+      // 時代の切り替え：前の画像から次の画像へ混ぜていく
+      if (v.fade) {
+        const k = clamp((now - v.fade.t0) / FADE_MS, 0, 1);
+        u.uMix.value = easeInOut(k);
+        if (k >= 1) endFade();
+        v.dirty = true;
+      }
       for (const sp of spots) if (sp.t0 != null && !sp.done) { paint(sp, now); v.dirty = true; }
       if (!v.dirty) return;
       v.dirty = false;
@@ -412,7 +559,7 @@ export function createAR(app, world, data) {
       v.pitch = clamp(v.pitch + dy, -v.pitchMax, v.pitchMax);
       v.vel = [v.vel[0] * 0.5 + (dx / dt) * 0.5, v.vel[1] * 0.5 + (dy / dt) * 0.5];
       v.dirty = true;
-      if (d.moved > 6) hideHint();
+      if (d.moved > 6) { v.own = true; hideHint(); }
     });
     const release = (e) => {
       const d = v.drag;
@@ -433,6 +580,7 @@ export function createAR(app, world, data) {
       v.goal = [g[0] + d[0] * KEY_STEP, clamp(g[1] + d[1] * KEY_STEP, -v.pitchMax, v.pitchMax)];
       v.vel = [0, 0];
       if (rm) { [v.yaw, v.pitch] = v.goal; v.goal = null; }
+      v.own = true;
       v.dirty = true;
       hideHint();
     });
@@ -442,11 +590,7 @@ export function createAR(app, world, data) {
       let image;
       try { image = await preload(s.pano); } catch (err) { console.error(err); fail('画像を読み込めませんでした。地図へ戻って、もう一度お試しください。'); return; }
       if (v.closed) return;
-      texture = new THREE.Texture(image);
-      texture.colorSpace = THREE.SRGBColorSpace;
-      texture.wrapS = THREE.RepeatWrapping; // 一周したつなぎ目もなめらかに
-      texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-      texture.needsUpdate = true;
+      texture = makeTexture(image);
       u.map.value = texture;
       await grow?.finished.catch(() => {});
       if (v.closed) return;
@@ -464,7 +608,190 @@ export function createAR(app, world, data) {
       }
       hintTimer = setTimeout(hideHint, 4000);
       findTimer = setTimeout(() => { v.finding = true; v.dirty = true; }, FIND_MS);
+      if (eras) {
+        preloadNear();
+        // 初めて開いたときだけ、時代の一覧があることを知らせる
+        if (!peeked && !rm) { peeked = true; eras.peek(); }
+      }
     })();
+
+    function makeTexture(image) {
+      const tex = new THREE.Texture(image);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.wrapS = THREE.RepeatWrapping; // 一周したつなぎ目もなめらかに
+      tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+      tex.needsUpdate = true;
+      return tex;
+    }
+
+    // ---------- 時代の切り替え：向きはそのままで、画像と見どころを入れ替える ----------
+    async function go(c) {
+      if (!v.ready || v.closed || c === cur) return;
+      cur = c;
+      markScene();
+      const id = ++switching;
+      if (c === shown) return;
+      let image;
+      try { image = await preload(c.pano); } catch (err) {
+        console.error(err);
+        if (id === switching) { cur = shown; markScene(); }
+        return;
+      }
+      if (v.closed || id !== switching) return;
+      if (v.fade) endFade(); // 前の切り替えの途中なら、そこで終えてから始める
+      const next = makeTexture(image);
+      cfg = data.panos[c.pano];
+      shown = c;
+      buildSpots();
+      warm();
+      renderer.initTexture(next);
+      const now = performance.now();
+      clearTimeout(findTimer);
+      clearTimeout(aimTimer);
+      v.finding = false;
+      if (rm) {
+        texture?.dispose();
+        texture = next;
+        u.map.value = next;
+      } else {
+        u.map2.value = next;
+        u.uMix.value = 0;
+        v.fade = { t0: now, next };
+        v.hold = now + FADE_MS * 0.6;
+      }
+      findTimer = setTimeout(() => { v.finding = true; v.dirty = true; }, FIND_MS + (rm ? 0 : FADE_MS));
+      aimTimer = setTimeout(() => { if (!v.closed) aimNearest(); }, (rm ? 0 : FADE_MS) + 250);
+      showStamp(c);
+      preloadNear();
+      v.dirty = true;
+    }
+    function endFade() {
+      const old = texture;
+      texture = v.fade.next;
+      u.map.value = texture;
+      u.map2.value = null;
+      u.uMix.value = 0;
+      v.fade = null;
+      old?.dispose();
+    }
+    // 前後の時代の画像を先に読んでおく
+    function preloadNear() {
+      const i = scenes.indexOf(cur);
+      for (const c of [scenes[i + 1], scenes[i - 1]]) if (c) preload(c.pano).catch(() => {});
+    }
+    function markScene() {
+      sceneLine.textContent = `${cur.year}　${cur.name}`;
+      eras.mark(cur);
+    }
+    // 切り替えた時代の名前を、画面の真ん中に少しの間だけ出す
+    let stampAnim = null;
+    function showStamp(c) {
+      stamp.replaceChildren(h('span', { text: c.year }), h('b', { text: c.name }));
+      stampAnim?.cancel();
+      stampAnim = stamp.animate(rm
+        ? [{ opacity: 1 }, { opacity: 1, offset: 0.95 }, { opacity: 0 }]
+        : [{ opacity: 0, transform: 'translate(-50%, -50%) scale(.97)' }, { opacity: 1, transform: 'translate(-50%, -50%)', offset: 0.15 }, { opacity: 1, transform: 'translate(-50%, -50%)', offset: 0.7 }, { opacity: 0, transform: 'translate(-50%, -50%)' }],
+        { duration: 1700, easing: 'ease', fill: 'forwards' });
+    }
+
+    // ---------- 時代の一覧（右の端。普段はつまみだけ出しておき、マウスを寄せるか押すと開く） ----------
+    function erasPanel() {
+      const lead = data.views?.[s.id]?.lead;
+      const btns = scenes.map((c) => h('button', { class: 'ar-era', type: 'button', onclick: () => go(c) },
+        h('img', { src: `assets/pano/${c.pano}_thumb.jpg`, alt: '', decoding: 'async' }),
+        h('span', { class: 'ar-era-text' }, h('span', { class: 'ar-era-year', text: c.year }), h('span', { class: 'ar-era-name', text: c.name }))));
+      const tab = h('button', { class: 'ar-eras-tab', type: 'button', 'aria-expanded': 'false', 'aria-controls': 'ar-eras-panel', 'aria-label': '別の時代を見る',
+        // マウスを寄せて開いたときに押しても閉じない。キーボードで開いたら、いまの時代へ移る
+        onclick: (e) => { set(hover || !api.open); if (api.open && e.detail === 0) current().focus({ preventScroll: true }); } },
+        icon('M15 5l-7 7 7 7'), h('span', { text: '別の時代' }));
+      // 新しい時代を上に
+      const panel = h('div', { class: 'ar-eras-panel thin-scroll', id: 'ar-eras-panel' },
+        h('p', { class: 'ar-eras-title', text: '同じ場所の、別の時代' }),
+        lead && h('p', { class: 'ar-eras-lead', text: lead }),
+        h('ol', { class: 'ar-eras-list' }, btns.map((b) => h('li', {}, b)).reverse()));
+      const nav = h('nav', { class: 'ar-eras', 'aria-label': '同じ場所の別の時代' }, tab, panel);
+      panel.inert = true;
+      let timer = 0, peekTimer = 0, peeking = false, hover = false;
+      const current = () => btns[scenes.indexOf(cur)] ?? btns[0];
+      const later = (fn, ms) => { clearTimeout(timer); timer = setTimeout(() => { timer = 0; fn(); }, ms); };
+      function set(open, peek = false) {
+        clearTimeout(timer);
+        timer = 0;
+        peeking = open && peek;
+        if (open === api.open) return;
+        api.open = open;
+        nav.classList.toggle('is-open', open);
+        tab.setAttribute('aria-expanded', String(open));
+        panel.inert = !open;
+        if (open) {
+          // いまの時代が見える所まで一覧を流しておく
+          const li = current().parentElement;
+          if (li.offsetTop < panel.scrollTop || li.offsetTop + li.offsetHeight > panel.scrollTop + panel.clientHeight) {
+            panel.scrollTop = li.offsetTop - (panel.clientHeight - li.offsetHeight) / 2;
+          }
+        }
+        v.dirty = true;
+      }
+      // マウスが上にあるとき・キーボードで一覧の中を選んでいるときは閉じない
+      function close() {
+        if (hover || nav.querySelector(':focus-visible')) return;
+        if (nav.contains(document.activeElement)) stage.focus({ preventScroll: true });
+        set(false);
+      }
+      // 一覧から離れたら少し待って閉じる（動かし続けていても待つ時間は延ばさない）
+      const closeSoon = () => { if (api.open && !timer) later(close, ERAS_LEAVE); };
+
+      el.addEventListener('pointermove', (e) => {
+        if (e.pointerType !== 'mouse' || v.drag || !v.ready) return;
+        if (e.clientX >= v.W - ERAS_HOT) set(true);
+        else if (!hover && !peeking) closeSoon();
+      });
+      nav.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') { hover = true; set(true); } });
+      nav.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') { hover = false; closeSoon(); } });
+      el.addEventListener('pointerleave', () => { hover = false; if (!peeking) closeSoon(); });
+      // 画像に触れたら閉じる（指で開いたとき・知らせている間も）
+      stage.addEventListener('pointerdown', () => { clearTimeout(peekTimer); if (api.open) set(false); });
+      nav.addEventListener('focusout', (e) => { if (!nav.contains(e.relatedTarget)) closeSoon(); });
+      nav.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && api.open) { e.stopPropagation(); tab.focus({ preventScroll: true }); set(false); return; }
+        if (!ARROWS[e.key] && e.key !== 'Home' && e.key !== 'End') return;
+        const items = [...panel.querySelectorAll('.ar-era')];
+        const i = items.indexOf(document.activeElement);
+        if (i < 0) return; // つまみの上では、矢印キーでそのまま見回せる
+        e.preventDefault();
+        e.stopPropagation(); // 一覧の中の矢印キーでは見回さない
+        const step = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0;
+        items[e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : clamp(i + step, 0, items.length - 1)].focus();
+      });
+
+      const api = {
+        nav, open: false,
+        tab,
+        tabW: () => tab.offsetWidth,
+        openW: () => panel.offsetWidth + tab.offsetWidth,
+        mark(c) {
+          for (const [i, b] of btns.entries()) {
+            if (scenes[i] === c) b.setAttribute('aria-current', 'true');
+            else b.removeAttribute('aria-current');
+          }
+        },
+        // マウスの端末では一覧を少しの間だけ出し、指の端末ではつまみを揺らす（一覧を出すと画像の大半が隠れるので）
+        peek() {
+          peekTimer = setTimeout(() => {
+            if (api.open || v.closed) return;
+            if (coarse) {
+              tab.animate([{ transform: 'none' }, { transform: 'translateX(-10px)', backgroundColor: 'rgba(255, 255, 255, .28)', offset: 0.35 }, { transform: 'none', offset: 0.7 }, { transform: 'none' }],
+                { duration: 1100, easing: 'ease-in-out', iterations: 2 });
+              return;
+            }
+            set(true, true);
+            peekTimer = setTimeout(() => { if (peeking) close(); }, PEEK_MS);
+          }, PEEK_AT);
+        },
+        stop() { clearTimeout(timer); clearTimeout(peekTimer); },
+      };
+      return api;
+    }
 
     function fail(message) {
       clone?.remove();
@@ -481,6 +808,9 @@ export function createAR(app, world, data) {
       v.closed = true;
       clearTimeout(hintTimer);
       clearTimeout(findTimer);
+      clearTimeout(aimTimer);
+      eras?.stop();
+      stampAnim?.cancel();
       const i = app.overlays.indexOf(entry);
       if (i >= 0) app.overlays.splice(i, 1);
       appRoot.inert = false;
@@ -491,6 +821,7 @@ export function createAR(app, world, data) {
           renderer.setAnimationLoop(null);
           scene.traverse((o) => { o.geometry?.dispose(); o.material?.dispose(); });
           texture?.dispose();
+          v.fade?.next.dispose();
           renderer.renderLists.dispose();
           css.domElement.replaceChildren();
         }

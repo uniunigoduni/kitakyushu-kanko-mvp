@@ -24,6 +24,9 @@ THUMB = {
     "dannoura": (0.50, 0.40), "moji_castle": (0.38, 0.45), "moji_station": (0.51, 0.43),
     "moji_port_war": (0.468, 0.55), "kanmon_bridge": (0.504, 0.47), "mojiko_retro": (0.55, 0.47),
 }
+# 巌流島の「同じ画角」の場面は、どの時代も同じ切り抜き（海峡の真ん中）にして、景色の移り変わりを見せる
+THUMB.update({f"ganryu_{k}": (0.56, 0.47) for k in (
+    "dannoura", "duel", "kitamae", "meiji", "taisho", "warship", "tunnel", "bridge", "now")})
 
 
 def patch(a, rects):

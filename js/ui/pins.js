@@ -1,16 +1,31 @@
 // 地図の上のピン。時代の区切りでだけ入れ替え、ズームに合わせて小さいピンを出し入れする。
+// 大事なピンから順に置き、先に置いたピンと重なるピンは名前を隠すか、ピンごと隠す（HOI4 の都市のように、寄るほど増える）。
 // 時代ごとの注目の史跡には、赤ペンで描いたような矢印を一度だけ引く。
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { h, svg } from '../util.js';
 
-// 段階ごとの頭の直径と軸の高さ（css/style.css の .pin.lv* と同じ値）
-export const HEAD = { 1: 10, 2: 15, 3: 22 };
-export const STEM = { 1: 0, 2: 12, 3: 18 };
+// ピンの頭の幅・高さと軸の高さ（css/style.css の .pin.lv* などと同じ値）。頭の中心は根元から軸の高さだけ上
+const GEOM = {
+  1: { w: 10, h: 10, stem: 0 },
+  2: { w: 15, h: 15, stem: 12 },
+  3: { w: 22, h: 22, stem: 18 },
+  special: { w: 26, h: 26, stem: 20 }, // 特別演出のある史跡
+  frame: { w: 62, h: 40, stem: 34 },   // 写真の枠のピン（時代ごとの場面がある場所）
+  dummy: { w: 8, h: 8, stem: 0 },      // MVP 用のダミー
+};
+export const geomOf = (s) => GEOM[s.scenes ? 'frame' : s.special ? 'special' : s.dummy ? 'dummy' : s.level];
 // ピンに添える短い名前：「戦時中の門司港：出征の港と空襲」→「戦時中の門司港」
 export const pinLabel = (name) => name.split('：')[0].replace(/（[^）]*）/g, '');
 
-const SMALL_R = 0.6; // 小さいピンを出す近さ（ホームの距離に対する比）
-const NAME_R = 0.4;  // 小さいピンの名前も出す近さ
+// 置く順（小さいほど先）：写真の枠 → 特別演出 → 最大レベル → 中 → 小 → ダミー。同じレベルは注目の史跡が先
+const tierOf = (s) => (s.scenes ? 0 : s.special ? 1 : s.dummy ? 8 : (3 - s.level) * 2 + (s.featured ? 2 : 3));
+// 出す近さ（ホームの距離に対する比がこれより小さいとき）。注目の史跡と中・最大レベルはいつでも出す
+const SMALL_R = 0.6, NAME_R = 0.4;        // 小さいピン、その名前
+const DUMMY_R = 0.36, DUMMY_NAME_R = 0.2; // ダミーのピン、その名前
+const showUnder = (s) => (s.dummy ? DUMMY_R : s.level < 2 && !s.featured ? SMALL_R : Infinity);
+const nameUnder = (s) => (s.dummy ? DUMMY_NAME_R : s.level < 2 && !s.featured ? NAME_R : Infinity);
+// 重なりの判定の余白。出ているピンは少しの重なりまで許し、隠れているピンは余裕ができてから出す（ちらつかないように）
+const PAD_KEEP = 2, PAD_SHOW = 8;
 // 赤い矢印の引き始め（ピンの頭から見た位置。上から順に、それぞれ短くしたものも試す）
 const STARTS = [[-108, -84], [-132, -40], [108, -84], [-140, 24], [-108, 84], [-60, 120], [108, 84]];
 const SCALES = [1, 0.72];
@@ -18,58 +33,156 @@ const SCALES = [1, 0.72];
 export function createPins(app, world, sites) {
   const pins = new Map();
   for (const s of sites) {
+    const head = h('span', { class: 'pin-head' });
     const hit = h('button', { class: 'pin-hit', type: 'button', tabindex: -1, 'aria-label': s.name },
-      h('span', { class: 'pin-head' }),
+      head,
       h('span', { class: 'pin-name', text: pinLabel(s.name) }));
-    const el = h('div', { class: `pin lv${s.level} is-off` }, h('i', { class: 'pin-shadow' }), h('i', { class: 'pin-stem' }), hit);
+    const kind = s.scenes ? ' is-frame' : s.special ? ' is-special' : s.dummy ? ' is-dummy' : '';
+    const el = h('div', { class: `pin lv${s.level}${kind} is-off` }, h('i', { class: 'pin-shadow' }), h('i', { class: 'pin-stem' }), hit);
     const obj = new CSS2DObject(el);
     obj.position.copy(world.at(s.lon, s.lat, 0.4));
+    obj.visible = false; // その時代になるまでは描かない（ダミーを入れると数が多いので）
+    const tier = tierOf(s);
+    obj.renderOrder = 10 - tier; // 大事なピンほど上に重ねる
     world.pinScene.add(obj);
-    const p = { s, el, hit, obj, on: false, far: false, near: false };
+    const p = { s, g: geomOf(s), el, hit, head, obj, tier, n: pins.size, show: showUnder(s), name: nameUnder(s), on: false, state: '', w: 0, offTimer: 0 };
+    if (s.scenes) {
+      p.img = h('img', { alt: '', decoding: 'async' });
+      head.append(p.img);
+      setFrame(p, s.pano);
+    }
     hit.addEventListener('click', () => app.selectSite(s.id, { from: 'map' }));
     hit.addEventListener('pointerenter', () => { if (A.pin === p && A.drawn) g.classList.remove('is-dim'); });
     hit.addEventListener('pointerleave', () => { if (A.pin === p && A.drawn) g.classList.add('is-dim'); });
     pins.set(s.id, p);
   }
 
-  // ---------- 時代とズーム ----------
-  let lastR = -1;
+  // 写真の枠には、いまの年の場面の切り抜きを入れる（読み込めてから差し替える）
+  function setFrame(p, pano) {
+    const src = `assets/pano/${pano}_thumb.jpg`;
+    if (p.src === src) return;
+    p.src = src;
+    const im = new Image();
+    im.onload = () => { if (p.src === src) p.img.src = src; };
+    im.src = src;
+  }
+
+  // ---------- 時代 ----------
+  const fadeIn = new Set();
+  let dirty = true, needMeasure = true;
   function setEra(era) {
     for (const p of pins.values()) {
       const on = p.s.eras.includes(era.id);
       if (on === p.on) continue;
       p.on = on;
-      p.el.classList.toggle('is-off', !on);
-      p.hit.tabIndex = on ? 0 : -1;
+      clearTimeout(p.offTimer);
+      if (on) {
+        // 描き始めてから is-off を外すと、ふわっと出る
+        p.obj.visible = true;
+        fadeIn.add(p);
+      } else {
+        fadeIn.delete(p);
+        p.el.classList.add('is-off');
+        p.hit.tabIndex = -1;
+        p.state = '';
+        p.offTimer = setTimeout(() => { if (!p.on) p.obj.visible = false; }, 200);
+      }
     }
-    lastR = -1;
-  }
-  function zoom() {
-    const r = world.distance() / world.home.distance;
-    if (Math.abs(r - lastR) < 0.005) return;
-    lastR = r;
-    for (const p of pins.values()) {
-      const far = p.s.level < 2 && !p.s.featured && r >= SMALL_R;
-      const near = p.s.featured || r < NAME_R;
-      if (far !== p.far) { p.far = far; p.el.classList.toggle('is-far', far); }
-      if (near !== p.near) { p.near = near; p.el.classList.toggle('is-near', near); }
-    }
+    needMeasure = true;
+    dirty = true;
   }
 
-  // ---------- ピンの下の地名を消す ----------
-  // 見えているピンの頭と名前の四角（地図の窓の中の px）。skip のピンは除く
-  let sized = false;
+  // ---------- ズームと重なり ----------
+  // 頭・名前・軸の四角（地図の窓の中の px）。q にはピンの根元の位置が入っている
+  const headRect = (p, q, out) => {
+    const { w, h: hh, stem } = p.g, cy = q.y - stem;
+    out[0] = q.x - w / 2 - 2; out[1] = cy - hh / 2 - 2; out[2] = q.x + w / 2 + 2; out[3] = cy + hh / 2 + 2;
+    return out;
+  };
+  const nameRect = (p, q, out) => {
+    const { w, stem } = p.g, cy = q.y - stem;
+    out[0] = q.x + w / 2; out[1] = cy - 10; out[2] = q.x - w / 2 + Math.max(p.w, w) + 4; out[3] = cy + 10;
+    return out;
+  };
+  const stemRect = (p, q, out) => {
+    const { h: hh, stem } = p.g;
+    out[0] = q.x - 3; out[1] = q.y - stem + hh / 2; out[2] = q.x + 3; out[3] = q.y + 2;
+    return out;
+  };
+
+  // 名前の幅（頭＋間＋名前）を測る。まだ描いていない（display:none の）ピンは 0 なので、次のコマで測り直す
+  function measure() {
+    let missing = false;
+    for (const p of pins.values()) {
+      if (!p.on || p.w) continue;
+      p.w = p.hit.offsetWidth;
+      if (!p.w) missing = true;
+    }
+    needMeasure = missing;
+  }
+
+  const placed = [];
+  const hits = (b, pad) => {
+    for (const a of placed) if (b[0] < a[2] + pad && b[2] > a[0] - pad && b[1] < a[3] + pad && b[3] > a[1] - pad) return true;
+    return false;
+  };
   const Q = {};
+  let lastR = -1, lastLayout = 0;
+  // 大事なピンから順に置く。選んでいるピンと矢印のピンは必ず出す
+  function layout() {
+    dirty = false;
+    lastLayout = performance.now();
+    if (needMeasure) { measure(); if (needMeasure) dirty = true; }
+    const r = world.distance() / world.home.distance;
+    lastR = r;
+    const sel = app.selected;
+    const rank = (p) => (p.s === sel ? -2 : p === A.pin ? -1 : p.tier);
+    const list = [...pins.values()].filter((p) => p.on).sort((a, b) => rank(a) - rank(b) || a.n - b.n);
+    placed.length = 0;
+    for (const p of list) {
+      const forced = p.s === sel || p === A.pin;
+      let state;
+      if (!forced && r >= p.show) state = 'far';
+      else {
+        const wantName = forced || r < p.name;
+        world.project(p.obj.position, Q);
+        if (!Q.visible) state = wantName ? 'full' : 'dot';
+        else {
+          const pad = p.state === 'full' || p.state === 'dot' ? PAD_KEEP : PAD_SHOW;
+          const hr = headRect(p, Q, [0, 0, 0, 0]);
+          if (!forced && hits(hr, pad)) state = 'crowded';
+          else {
+            const nr = nameRect(p, Q, [0, 0, 0, 0]);
+            state = wantName && (forced || !hits(nr, pad)) ? 'full' : 'dot';
+            placed.push(hr);
+            if (state === 'full') placed.push(nr);
+            if (p.g.stem > p.g.h / 2) placed.push(stemRect(p, Q, [0, 0, 0, 0]));
+          }
+        }
+      }
+      setState(p, state);
+    }
+  }
+  function setState(p, st) {
+    if (st === p.state) return;
+    p.state = st;
+    p.el.classList.toggle('is-far', st === 'far');
+    p.el.classList.toggle('is-crowded', st === 'crowded');
+    p.el.classList.toggle('is-dot', st === 'dot');
+    p.hit.tabIndex = st === 'full' || st === 'dot' ? 0 : -1;
+  }
+  const shown = (p) => p.on && (p.state === 'full' || p.state === 'dot');
+
+  // ---------- ピンの下の地名を消す ----------
+  // 出ているピンの頭と名前・軸の四角。skip のピンは除く
   function pinRects(out, skip) {
     for (const p of pins.values()) {
-      if (!p.on || p.far || p === skip) continue;
+      if (!shown(p) || p === skip) continue;
       world.project(p.obj.position, Q);
       if (!Q.visible) continue;
-      if (!sized || !p.w) { sized = true; for (const q of pins.values()) q.w = q.hit.offsetWidth; }
-      const hd = HEAD[p.s.level], cy = Q.y - STEM[p.s.level];
-      const named = p.s.level >= 2 || p.near;
-      out.push([Q.x - hd / 2 - 4, cy - 12, Q.x - hd / 2 + (named ? p.w : hd) + 4, cy + 12]);
-      if (STEM[p.s.level]) out.push([Q.x - 9, cy, Q.x + 9, Q.y + 4]);
+      const { w, h: hh, stem } = p.g, cy = Q.y - stem, half = Math.max(12, hh / 2 + 2);
+      out.push([Q.x - w / 2 - 4, cy - half, Q.x - w / 2 + (p.state === 'full' ? Math.max(p.w, w) : w) + 4, cy + half]);
+      if (stem > hh / 2) out.push([Q.x - 9, cy + hh / 2, Q.x + 9, Q.y + 4]);
     }
     return out;
   }
@@ -89,7 +202,7 @@ export function createPins(app, world, sites) {
 
   const A = { pin: null, drawn: false, hold: true, pending: false, timer: 0, dimTimer: 0, anims: [] };
   const P = {};
-  const headAt = (p, out) => { world.project(p.obj.position, out); out.y -= STEM[p.s.level]; return out; };
+  const headAt = (p, out) => { world.project(p.obj.position, out); out.y -= p.g.stem; return out; };
 
   function resetArrow() {
     clearTimeout(A.timer); clearTimeout(A.dimTimer);
@@ -115,7 +228,7 @@ export function createPins(app, world, sites) {
     const sx = Math.sign(S[0]), sy = Math.sign(S[1]);
     const len = Math.hypot(S[0], S[1]);
     const u = [S[0] / len, S[1] / len];
-    const r = HEAD[p.s.level] / 2 + 7;
+    const r = Math.max(p.g.w, p.g.h) / 2 + 7;
     const T = [u[0] * r, u[1] * r];
     // 手で引いたような、ゆるい弧
     const d = [T[0] - S[0], T[1] - S[1]];
@@ -157,9 +270,9 @@ export function createPins(app, world, sites) {
   // 短くするか、左・右上・左下・下・右下の順に向きを変える（P にはピンの頭の位置が入っている）
   function pickStart(p) {
     const { W, H } = world.size;
-    const hd = HEAD[p.s.level];
+    const hw = p.g.w;
     const avoid = pinRects(world.labelRects(), p);
-    if (p.w) avoid.push([P.x + hd / 2, P.y - 11, P.x - hd / 2 + p.w, P.y + 11]);
+    if (p.w) avoid.push([P.x + hw / 2, P.y - 11, P.x - hw / 2 + p.w, P.y + 11]);
     const inWin = ([dx, dy]) => P.x + dx > 16 && P.x + dx < W - 16 && P.y + dy > 16 && P.y + dy < H - 16;
     const clear = ([dx, dy]) => {
       for (let i = 0; i < 12; i++) {
@@ -181,9 +294,13 @@ export function createPins(app, world, sites) {
   }
 
   // ---------- 出来事に合わせる ----------
+  // 矢印を引く史跡：その時代の注目の史跡のうち、いちばん先に置くもの（どの時代にも出る写真の枠とダミーは除く）
   const featuredOf = (era) => {
     let best = null;
-    for (const p of pins.values()) if (p.s.featured && p.s.eras.includes(era.id) && (!best || p.s.level > best.s.level)) best = p;
+    for (const p of pins.values()) {
+      if (!p.s.featured || p.s.scenes || p.s.dummy || !p.s.eras.includes(era.id)) continue;
+      if (!best || p.tier < best.tier) best = p;
+    }
     return best;
   };
   app.on('era', (era, prev) => {
@@ -191,22 +308,53 @@ export function createPins(app, world, sites) {
     resetArrow();
     A.pin = featuredOf(era);
     // 題字と同じく地名・ピンの書体も変わるので、大きさを測り直す
-    if (prev?.font !== era.font) { sized = false; world.measureLabels(); }
+    if (prev?.font !== era.font) remeasure();
   });
   app.on('t', () => schedule(600)); // 時代が決まって 0.6 秒たったら引く
+  app.on('scene', (s) => { const p = pins.get(s.id); if (p?.img) setFrame(p, s.pano); });
   app.on('select', (s) => {
-    for (const p of pins.values()) p.el.classList.toggle('is-selected', p.s === s);
+    for (const p of pins.values()) {
+      const on = p.s === s;
+      p.el.classList.toggle('is-selected', on);
+      p.obj.renderOrder = on ? 20 : 10 - p.tier;
+    }
     layer.classList.add('is-hidden');
+    dirty = true;
   });
   app.on('deselect', () => {
-    for (const p of pins.values()) p.el.classList.remove('is-selected');
+    for (const p of pins.values()) { p.el.classList.remove('is-selected'); p.obj.renderOrder = 10 - p.tier; }
     layer.classList.remove('is-hidden');
     if (A.pending) { A.pending = false; schedule(300); }
+    dirty = true;
   });
-  world.onFrame(() => { zoom(); follow(); });
-  document.fonts?.ready.then(() => { sized = false; world.measureLabels(); });
+  function remeasure() {
+    for (const p of pins.values()) p.w = 0;
+    needMeasure = true;
+    dirty = true;
+    world.measureLabels();
+  }
+
+  // 寄り引きはすぐ、動かしている間は 0.18 秒ごと、窓の大きさが変わったときと止まったときに置き直す
+  const C = { x: NaN, y: NaN, z: NaN, W: 0, H: 0 };
+  world.onFrame(() => {
+    const cp = world.camera.position, { W, H } = world.size;
+    const r = world.distance() / world.home.distance;
+    const moved = cp.x !== C.x || cp.y !== C.y || cp.z !== C.z;
+    if (dirty || Math.abs(r - lastR) > 0.004 || W !== C.W || H !== C.H || (moved && performance.now() - lastLayout > 180)) {
+      C.x = cp.x; C.y = cp.y; C.z = cp.z; C.W = W; C.H = H;
+      layout();
+    }
+    // 描き始めたピン（display が付いたもの）から、ふわっと出す
+    for (const p of fadeIn) {
+      if (p.el.style.display === 'none' || !p.el.isConnected) continue;
+      fadeIn.delete(p);
+      if (p.on) p.el.classList.remove('is-off');
+    }
+    follow();
+  });
+  document.fonts?.ready.then(remeasure);
   // ピンが画面の外で引けなかったときは、地図が止まったところでもう一度
-  world.controls.addEventListener('rest', () => schedule(300));
+  world.controls.addEventListener('rest', () => { dirty = true; schedule(300); });
 
   return {
     pins,

@@ -13,7 +13,8 @@ export function createBand(app, sites) {
   const anchors = []; // スライダーの位置 t と、帯の上の x の対応（t の小さい順）
 
   const byEra = new Map(ERAS.map((e) => [e.id, []]));
-  for (const s of sites) byEra.get(s.eras[0])?.push(s);
+  // どの時代にも出る史跡（巌流島）は bandEra の時代の欄に置く
+  for (const s of sites) byEra.get(s.bandEra ?? s.eras[0])?.push(s);
 
   for (const e of ERAS) {
     const group = byEra.get(e.id).sort((a, b) => a.year - b.year);
@@ -25,15 +26,16 @@ export function createBand(app, sites) {
     const pad = (e.t1 - e.t0) * 0.12;
     let prevT = e.t0;
     for (const s of group) {
+      const thumb = s.pano && h('img', { class: 'bc-thumb', src: `assets/pano/${s.pano}_thumb.jpg`, alt: '', loading: 'lazy', decoding: 'async' });
       const btn = h('button', { class: 'band-card', type: 'button', dataset: { id: s.id }, onclick: () => app.selectSite(s.id) },
         h('span', { class: 'bc-text' },
           h('span', { class: 'bc-year', text: shortYear(s.yearLabel ?? '') }),
           h('span', { class: 'bc-name', text: s.name }),
           s.level >= 2 && h('span', { class: 'bc-meta', text: 'ガイドあり' })),
-        s.pano && h('img', { class: 'bc-thumb', src: `assets/pano/${s.pano}_thumb.jpg`, alt: '', loading: 'lazy', decoding: 'async' }));
+        thumb);
       const li = h('li', {}, btn);
       list.append(li);
-      cards.set(s.id, { s, btn, era: e });
+      cards.set(s.id, { s, btn, thumb, era: e });
       const t = Math.max(prevT + 1e-4, Math.min(Math.max(yearToT(s.year), e.t0 + pad), e.t1 - pad));
       prevT = t;
       anchors.push({ t, el: li, at: 'center' });
@@ -79,6 +81,7 @@ export function createBand(app, sites) {
     for (const c of cards.values()) c.btn.classList.toggle('is-now', c.s.eras.includes(era.id));
   });
   app.on('select', (s) => { for (const c of cards.values()) c.btn.classList.toggle('is-selected', c.s === s); });
+  app.on('scene', (s) => { const c = cards.get(s.id); if (c?.thumb) c.thumb.src = `assets/pano/${s.pano}_thumb.jpg`; });
   app.on('deselect', () => { for (const c of cards.values()) c.btn.classList.remove('is-selected'); });
 
   const ro = new ResizeObserver(() => { measure(); follow(); });

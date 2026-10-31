@@ -324,16 +324,16 @@ button.dt-item { width: 100%; text-align: left; }
 
 /* ---------- ピン ---------- */
 .pin { position: relative; width: 0; height: 0; pointer-events: none; transition: opacity var(--t-fade); }
-.pin.is-off, .pin.is-far { opacity: 0; }
-.pin.is-off *, .pin.is-far * { pointer-events: none !important; }
+.pin.is-off, .pin.is-far, .pin.is-crowded { opacity: 0; }
+.pin.is-off *, .pin.is-far *, .pin.is-crowded * { pointer-events: none !important; }
 .pin-shadow { position: absolute; left: -9px; top: -4px; width: 18px; height: 8px; border-radius: 50%; background: radial-gradient(closest-side, rgba(0, 0, 0, .55), rgba(0, 0, 0, 0)); }
 .pin-stem { position: absolute; left: -.75px; bottom: 0; width: 1.5px; height: var(--stem, 12px); background: rgba(242, 242, 242, .85); box-shadow: 0 0 2px rgba(0, 0, 0, .7); }
 .pin-hit {
   position: absolute; left: 0; bottom: var(--stem, 12px);
   display: flex; align-items: center; gap: 7px;
   height: var(--head, 15px);
-  transform: translate(calc(var(--head, 15px) / -2), calc(var(--head, 15px) / 2));
-  transform-origin: calc(var(--head, 15px) / 2) 50%;
+  transform: translate(calc(var(--head-w, var(--head, 15px)) / -2), calc(var(--head, 15px) / 2));
+  transform-origin: calc(var(--head-w, var(--head, 15px)) / 2) 50%;
   pointer-events: auto;
   cursor: pointer;
   white-space: nowrap;
@@ -341,7 +341,7 @@ button.dt-item { width: 100%; text-align: left; }
 .pin-head {
   position: relative;
   flex: 0 0 auto;
-  width: var(--head, 15px); height: var(--head, 15px);
+  width: var(--head-w, var(--head, 15px)); height: var(--head, 15px);
   border-radius: 50%;
   background: #0c0c0c;
   border: 1.5px solid var(--strong);
@@ -360,16 +360,40 @@ button.dt-item { width: 100%; text-align: left; }
 .pin.lv1 .pin-stem { display: none; }
 .pin.lv1 .pin-head { border-width: 1.5px; }
 .pin.lv1 .pin-head::after { display: none; }
-.pin.lv1 .pin-name { font-size: 11.5px; font-weight: 500; opacity: 0; }
-.pin.lv1.is-near .pin-name, .pin.lv1 .pin-hit:hover .pin-name { opacity: 1; }
+.pin.lv1 .pin-name { font-size: 11.5px; font-weight: 500; }
 .pin.lv2 { --head: 15px; --stem: 12px; }
 .pin.lv3 { --head: 22px; --stem: 18px; }
 .pin.lv3 .pin-head { border: 2px solid var(--era-accent); box-shadow: 0 0 0 2px #0c0c0c, 0 0 0 3px rgba(242, 242, 242, .9), 0 2px 8px rgba(0, 0, 0, .6); }
 .pin.lv3 .pin-head::after { width: 40%; height: 40%; background: var(--era-accent); }
 .pin.lv3 .pin-name { font-size: 13.5px; font-weight: 700; }
+/* 特別演出のある史跡：ひと回り大きく、中はひし形、外へゆっくり広がる輪 */
+.pin.is-special { --head: 26px; --stem: 20px; }
+.pin.is-special .pin-head { border: 2px solid var(--era-accent); box-shadow: 0 0 0 2px #0c0c0c, 0 0 0 3.5px rgba(242, 242, 242, .95), 0 2px 10px rgba(0, 0, 0, .65); }
+.pin.is-special .pin-head::after { width: 34%; height: 34%; border-radius: 1px; transform: rotate(45deg); background: var(--era-accent); }
+.pin.is-special .pin-head::before { content: ''; position: absolute; inset: -7px; border-radius: 50%; border: 1.5px solid var(--era-accent); opacity: 0; animation: pin-halo 2.6s ease-out infinite; }
+.pin.is-special .pin-name { font-size: 14px; font-weight: 700; }
+@keyframes pin-halo { 0% { transform: scale(.7); opacity: .9; } 70%, 100% { transform: scale(1.5); opacity: 0; } }
+/* 写真の枠のピン（巌流島）：どの時代にも出し、枠の中はいまの年の場面 */
+.pin.is-frame { --head: 40px; --head-w: 62px; --stem: 34px; }
+.pin.is-frame .pin-head { border-radius: 3px; border: 2px solid #f4f1ea; background: #1a1a1a; overflow: hidden; box-shadow: 0 0 0 1px rgba(0, 0, 0, .55), 0 4px 14px rgba(0, 0, 0, .6); }
+.pin.is-frame .pin-head::after { display: none; }
+.pin.is-frame .pin-head img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.pin.is-frame .pin-name { font-size: 13.5px; font-weight: 700; }
+.pin.is-frame .pin-hit:hover .pin-head { transform: scale(1.06); }
+/* MVP 用のダミーのピン：いちばん小さく、寄ったときだけ出す */
+.pin.is-dummy { --head: 8px; --stem: 0px; }
+.pin.is-dummy .pin-head { border: 1.5px solid rgba(242, 242, 242, .7); background: rgba(12, 12, 12, .85); box-shadow: 0 1px 3px rgba(0, 0, 0, .5); }
+.pin.is-dummy .pin-name { font-size: 11px; font-weight: 500; color: #d8d1c3; }
+/* 名前を隠したピン（引いたとき・ほかのピンと重なるとき）。頭にポインターを置くと名前を出す */
+.pin.is-dot .pin-name { opacity: 0; }
+.pin.is-dot .pin-hit { pointer-events: none; }
+.pin.is-dot .pin-head { pointer-events: auto; }
+.pin.is-dot .pin-hit:hover .pin-name, .pin.is-dot .pin-hit:focus-visible .pin-name { opacity: 1; }
 .pin.is-selected .pin-head { transform: scale(1.15); border-color: var(--era-accent); }
+.pin.is-frame.is-selected .pin-head { transform: scale(1.08); border-color: #f4f1ea; }
 .pin.is-pop .pin-hit { animation: pin-pop 280ms cubic-bezier(.34, 1.56, .64, 1); }
-@keyframes pin-pop { from { transform: translate(calc(var(--head) / -2), calc(var(--head) / 2)) scale(.6); } }
+@keyframes pin-pop { from { transform: translate(calc(var(--head-w, var(--head)) / -2), calc(var(--head) / 2)) scale(.6); } }
+@media (prefers-reduced-motion: reduce) { .pin.is-special .pin-head::before { animation: none; opacity: .45; transform: none; } }
 
 /* 赤い矢印（赤ペンの手描き） */
 .arrow-layer { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 1; } /* 拡大・縮小のボタン（2）より下 */
@@ -628,6 +652,67 @@ body.is-intro #timeline, body.is-intro #band, body.is-intro .map-canvas { pointe
 .ar-clone { position: absolute; background-repeat: no-repeat; background-color: #111; pointer-events: none; }
 .ar-error { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; padding: 24px; text-align: center; line-height: 2; color: var(--text); }
 @keyframes ar-in { from { opacity: 0; } }
+/* 時代ごとの場面がある史跡（巌流島）：題名の下の場面の名前、切り替えたときに真ん中に出す名前、右の端の時代の一覧 */
+.ar-caption .ar-scene { font-size: 13px; font-weight: 700; color: var(--strong); }
+.ar-stamp {
+  position: absolute; left: 50%; top: 40%;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  margin: 0; padding: 12px 24px 14px;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, .55); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, .18); border-radius: var(--radius);
+  white-space: nowrap; pointer-events: none; opacity: 0;
+}
+.ar-stamp span { font-size: 13px; color: #c4c4c4; letter-spacing: .08em; font-feature-settings: 'tnum'; }
+.ar-stamp b { font-size: 24px; letter-spacing: .08em; }
+.ar-eras {
+  position: absolute; right: env(safe-area-inset-right, 0px); top: 50%;
+  display: flex; align-items: center; gap: 8px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  transition: opacity 400ms ease;
+}
+.ar:not(.is-ready) .ar-eras { opacity: 0; visibility: hidden; }
+.ar-eras-tab {
+  order: 2;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  width: 40px; padding: 12px 0 14px;
+  background: rgba(0, 0, 0, .55); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, .18); border-right: 0; border-radius: var(--radius) 0 0 var(--radius);
+  font-size: 13px; font-weight: 700; letter-spacing: .14em;
+  pointer-events: auto;
+  transition: background-color var(--t-hover);
+}
+.ar-eras-tab span { writing-mode: vertical-rl; }
+.ar-eras-tab svg { width: 18px; height: 18px; transition: transform var(--t-panel); }
+.ar-eras-tab:hover, .ar-eras.is-open .ar-eras-tab { background: rgba(40, 40, 40, .7); }
+.ar-eras.is-open .ar-eras-tab svg { transform: rotate(180deg); }
+.ar-eras-panel {
+  order: 1; position: relative;
+  width: 296px; max-height: calc(100dvh - 150px); overflow: hidden auto; overscroll-behavior: contain;
+  padding: 14px 10px 10px;
+  background: rgba(0, 0, 0, .62); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, .18); border-radius: var(--radius);
+  pointer-events: auto;
+  opacity: 0; visibility: hidden; transform: translateX(16px);
+  transition: opacity var(--t-panel), transform var(--t-panel), visibility 0s linear 180ms;
+}
+.ar-eras.is-open .ar-eras-panel { opacity: 1; visibility: visible; transform: none; transition: opacity var(--t-panel), transform var(--t-panel); }
+.ar-eras-title { margin: 0 6px 2px; font-size: 13px; font-weight: 700; letter-spacing: .06em; }
+.ar-eras-lead { margin: 0 6px 10px; font-size: 12px; line-height: 1.65; color: #c4c4c4; word-break: auto-phrase; text-wrap: pretty; }
+.ar-eras-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; margin: 0; padding: 0; list-style: none; }
+.ar-era {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 6px; border-radius: 8px;
+  text-align: left;
+  transition: background-color var(--t-hover);
+}
+.ar-era:hover { background: rgba(255, 255, 255, .1); }
+.ar-era[aria-current] { background: rgba(255, 255, 255, .16); box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .85); }
+.ar-era img { flex: 0 0 auto; width: 84px; height: 48px; border-radius: 6px; object-fit: cover; background: #222; }
+.ar-era-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ar-era-year { font-size: 11.5px; color: #b8b8b8; letter-spacing: .04em; font-feature-settings: 'tnum'; }
+.ar-era-name { font-size: 14px; font-weight: 700; line-height: 1.45; letter-spacing: .02em; word-break: auto-phrase; overflow-wrap: anywhere; }
 
 /* ---------- ガイドとつながる（決済のデモ）。白地の決済ページ風：地 #f6f9fc・文字 #0d253d・補助 #64748d・線 #e3e8ee・塗りのボタン #533afd ---------- */
 .pay {
@@ -720,6 +805,17 @@ body.is-intro #timeline, body.is-intro #band, body.is-intro .map-canvas { pointe
   .ar-note-box { max-width: min(220px, 70vw); padding: 8px 11px 9px; font-size: 13px; }
   .ar-caption b { font-size: 14px; }
   .ar-caption span { font-size: 11px; }
+  .ar-caption .ar-scene { font-size: 12px; }
+  .ar-stamp b { font-size: 20px; }
+  /* 時代の一覧は、絵と年だけの細い列にして、切り替えた画像が左に見えるようにする */
+  .ar-eras-tab { width: 34px; padding: 10px 0 12px; font-size: 12px; }
+  .ar-eras-panel { width: 152px; max-height: calc(100dvh - 190px); padding: 10px 6px 6px; }
+  .ar-eras-title { margin: 0 2px 6px; font-size: 12px; letter-spacing: 0; word-break: auto-phrase; }
+  .ar-eras-lead { display: none; }
+  .ar-era { flex-direction: column; align-items: stretch; gap: 4px; padding: 5px; }
+  .ar-era img { width: 100%; height: 58px; }
+  .ar-era-year { font-size: 11px; }
+  .ar-era-name { font-size: 12.5px; line-height: 1.4; letter-spacing: 0; }
 }
 @media (max-width: 374px) {
   .title-name { display: none; }

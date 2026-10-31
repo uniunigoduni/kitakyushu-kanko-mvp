@@ -133,6 +133,38 @@
       "disputed": "主戦場の範囲は資料で書き方が異なる。下関市のパンフは『吾妻鏡』の両軍の位置（源氏は満珠島・干珠島付近、平氏は田野浦沖）を紹介し、冊子『門司の歴史』は「田野浦・和布刈沖海戦」と呼ぶ。両軍がどこからどこまで戦ったかは未確認。"
     },
     {
+      "id": "ganryujima",
+      "name": "巌流島の千年：同じ浜から見る関門海峡",
+      "year": 1185,
+      "yearLabel": "1185年〜現在",
+      "eras": ["jomon", "yayoi", "kofun", "asuka", "nara", "heian", "kamakura", "muromachi", "azuchi", "edo", "bakumatsu", "meiji", "taisho", "showa_pre", "war", "postwar", "growth", "showa_late", "heisei", "now"],
+      "bandEra": "heian",
+      "lat": 33.9334,
+      "lon": 130.9298,
+      "coordNote": "巌流島（船島）の中心。OpenStreetMap の位置（33.93335, 130.92980）。ARは島の東の浜から北東を見た想像図",
+      "level": 3,
+      "summary": "同じ浜から、壇ノ浦の戦いから今の関門橋までを見比べる",
+      "body": [
+        "巌流島の正式な名は「船島」です。戦いに敗れた佐々木小次郎の流派の名「巌流」から、巌流島と呼ばれるようになりました。宮本武蔵と小次郎の決闘は、一般には1612年（慶長17年）4月13日のこととされています。",
+        "ARでは、島の東の浜から北東（関門海峡の方）を向いたまま、壇ノ浦の戦い（1185年）から今の関門橋までの9つの場面を想像図で見比べられます。左の岸が下関、右の岸が門司です。ARの中で画面の右の端に寄せると、時代の一覧が出ます。"
+      ],
+      "sources": [
+        {"title": "山口県観光サイト「巌流島」", "url": "https://yamaguchi-tourism.jp/spot/detail_10426.html", "note": "島の正式な名は船島。敗れた小次郎の流派から巌流島と呼ばれるようになった"},
+        {"title": "Wikipedia「巌流島の戦い」", "url": "https://ja.wikipedia.org/wiki/巌流島の戦い", "note": "一般には慶長17年4月13日（1612年）とされ、様々な説がある"},
+        {"title": "観光庁 多言語解説文データベース「巌流島」（日本語の原文、PDF）", "url": "https://www.mlit.go.jp/tagengo-db/common/001781683.pdf", "note": "決闘の話は様々で、確かなのは春の朝に浜辺で戦ったことだけ。武蔵の遅刻、舟の櫂を削った木刀の話"},
+        {"title": "下関市『壇ノ浦パンフ』（しものせき観光ホームページ、PDF）", "url": "https://shimonoseki.travel/wp/wp-content/uploads/2022/05/4520ef6d9825fea2337b24084b3f6bc5.pdf", "note": "『吾妻鏡』による平家の船の動き（彦島から赤間関を過ぎて田野浦沖へ）"},
+        {"title": "観光庁 多言語解説文データベース「北前船の寄港地：小浜と敦賀」（PDF）", "url": "https://www.mlit.go.jp/tagengo-db/common/001653292.pdf", "note": "北前船は大阪と北海道の間を行き来し、寄港地で売り買いした。関門海峡を通る西回り航路"},
+        {"title": "山口県観光サイト「古地図を片手にまちを歩こう＜赤間関編＞」", "url": "https://yamaguchi-tourism.jp/spot/detail_18346.html", "note": "江戸時代、赤間関は北前船の寄港地となり栄えた"},
+        {"title": "門司区『門司の歴史』明治時代（PDF）", "url": "https://www.city.kitakyushu.lg.jp/files/000063488.pdf", "note": "1889年の門司築港と特別輸出港、1887年からの砲台"},
+        {"title": "国土交通省 メールマガジン（関門海峡の改良工事）", "url": "https://www.mlit.go.jp/page/kanbo01_hy_000850.html", "note": "1910年8月から内務省の直轄工事。最初は岩礁の除去で、明治44年から昭和4年まで"},
+        {"title": "門司区のあゆみ（明治）", "url": "https://www.city.kitakyushu.lg.jp/moji/file_0017.html", "note": "1901年5月の関門連絡船の運航開始"},
+        {"title": "門司区のあゆみ（昭和1）", "url": "https://www.city.kitakyushu.lg.jp/moji/file_0019.html", "note": "1942年の関門鉄道トンネルの開通"},
+        {"title": "門司区のあゆみ（昭和3）", "url": "https://www.city.kitakyushu.lg.jp/moji/file_0021.html", "note": "関門橋の起工（1968年）と開通（1973年11月）"},
+        {"title": "門司区のあゆみ（平成以降）", "url": "https://www.city.kitakyushu.lg.jp/moji/file_0022.html", "note": "1999年の門司港レトロ展望室"}
+      ],
+      "disputed": "決闘の日付や様子には様々な説があります。観光庁の解説も、二人の対決には様々な話があり、確かなのは「ある春の朝、武蔵は浜辺で佐々木小次郎と決闘を行った」ことだけだとしています。ARの場面は想像図で、船や建物の形・数は確かめていません。"
+    },
+    {
       "id": "koso_hachiman",
       "name": "甲宗八幡神社",
       "year": 860,

@@ -1,7 +1,7 @@
 // 史跡の吹き出し。ピンを隠さない側に出し（ピンが画面の下の方なら上）、しっぽはピンを指したまま地図に付いていく。
 // 別のピンを選ぶと、前の吹き出しは消して新しい中身に入れ替える。
 import { clamp, h, isPaid, paidUntil } from '../util.js';
-import { HEAD, STEM } from './pins.js';
+import { geomOf } from './pins.js';
 
 const M = 8;     // 地図の窓の縁からの余白
 const GAP = 14;  // ピンと吹き出しの間（しっぽの分）
@@ -71,14 +71,15 @@ export function createPopup(app, world, pins) {
     const { W, H } = world.size;
     if (P.x === last.x && P.y === last.y && W === last.W && H === last.H) return;
     Object.assign(last, { x: P.x, y: P.y, W, H });
-    const r = HEAD[cur.level] / 2;
-    const hx = P.x, hy = P.y - STEM[cur.level];
+    const g = geomOf(cur);
+    const rx = g.w / 2, ry = g.h / 2;
+    const hx = P.x, hy = P.y - g.stem;
     const away = !P.visible || hx < 0 || hx > W || hy < 0 || P.y > H;
     el.classList.toggle('is-away', away);
     if (away) return;
 
-    const top = hy - r, bottom = Math.max(hy + r, P.y + 4);
-    const room = { above: top - GAP - M, below: H - M - bottom - GAP, right: W - M - (hx + r + GAP), left: hx - r - GAP - M };
+    const top = hy - ry, bottom = Math.max(hy + ry, P.y + 4);
+    const room = { above: top - GAP - M, below: H - M - bottom - GAP, right: W - M - (hx + rx + GAP), left: hx - rx - GAP - M };
     const vertical = (sd) => sd === 'above' || sd === 'below';
     const fits = (sd) => (vertical(sd) ? room[sd] >= natH && W - 2 * M >= w : room[sd] >= w && H - 2 * M >= natH);
     const order = hy > H / 2 ? ['above', 'below', 'right', 'left'] : ['below', 'above', 'right', 'left'];
@@ -101,7 +102,7 @@ export function createPopup(app, world, pins) {
       tail.style.left = `${Math.round(clamp(hx - x, TAIL, w - TAIL) - 7)}px`;
       tail.style.top = '';
     } else {
-      x = sd === 'right' ? hx + r + GAP : hx - r - GAP - w;
+      x = sd === 'right' ? hx + rx + GAP : hx - rx - GAP - w;
       y = clamp(hy - ph / 2, M, H - M - ph);
       tail.style.top = `${Math.round(clamp(hy - y, TAIL, ph - TAIL) - 7)}px`;
       tail.style.left = '';
@@ -136,6 +137,11 @@ export function createPopup(app, world, pins) {
   // 時代を動かして、その史跡がない時代に入ったら閉じる
   app.on('era', (era) => { if (cur && !cur.eras.includes(era.id)) app.deselect(); });
   app.on('paid', (s) => { if (cur === s) { fillFoot(s); measure(); place(); } });
+  // 時代ごとの場面がある史跡は、年を動かしたら AR の切り抜きもその場面にする
+  app.on('scene', (s) => {
+    const img = cur === s && scroll.querySelector('.popup-ar img');
+    if (img) img.src = `assets/pano/${s.pano}_thumb.jpg`;
+  });
   world.onFrame(place);
   new ResizeObserver(() => { measure(); place(); }).observe(map);
   document.fonts?.ready.then(() => { measure(); place(); });
