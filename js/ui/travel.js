@@ -26,7 +26,9 @@ export function createTravel(app, world) {
     target = s;
     lead.textContent = back ? '現代へ' : 'さかのぼる';
     year.textContent = formatYear(app.year);
-    rows.replaceChildren(...(back ? [...row('当時', then), ...row('いま', now)] : [...row('いま', now), ...row('当時', then)]));
+    // 名前が当時と変わらないもの（神社・灯台など）は「いまも」の1行にする
+    rows.replaceChildren(...(now === then ? row('いまも', now)
+      : back ? [...row('当時', then), ...row('いま', now)] : [...row('いま', now), ...row('当時', then)]));
     el.classList.toggle('is-back', back);
     el.classList.remove('is-done', 'is-open');
     el.hidden = false;

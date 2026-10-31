@@ -22,8 +22,9 @@ export const geomOf = (s, today = false) => GEOM[s.scenes ? 'frame' : s.special 
 export const pinLabel = (name) => name.split('：')[0].replace(/（[^）]*）/g, '');
 // 一押しの史跡は、その時代に加えて現代の地図にも「いまの姿」として出す
 export const isToday = (s, era) => !!s.pick && era?.id === 'now' && !s.eras.includes('now');
-// 現代の地図で名前に添える、さかのぼる先の年（「1934年」「1183年頃」）
-export const yearTag = (s) => shortYear(s.yearLabel ?? '').match(/^前?\d+年頃?/)?.[0] ?? `${formatYear(s.year)}年`;
+// 現代の地図で名前に添える、さかのぼる先の年（「1934年」「1183年頃」「1912〜1913年」）。
+// 年がはっきりしない伝承などは、データの yearShort（「平安末期」など）をそのまま使う
+export const yearTag = (s) => s.yearShort ?? shortYear(s.yearLabel ?? '').match(/^前?\d+(?:〜\d+)?年頃?/)?.[0] ?? `${formatYear(s.year)}年`;
 
 // 置く順（小さいほど先）：写真の枠 → 特別演出 → 最大レベル → 中 → 小 → ダミー。同じレベルは注目の史跡が先
 const tierOf = (s) => (s.scenes ? 0 : s.special ? 1 : s.dummy ? 8 : (3 - s.level) * 2 + (s.featured ? 2 : 3));
@@ -150,7 +151,7 @@ export function createPins(app, world, sites) {
   };
   const Q = {};
   let lastR = -1, lastLayout = 0;
-  // 大事なピンから順に置く。選んでいるピンと矢印のピンは必ず出す
+  // 大事なピンから順に置く。選んでいるピンと矢印のピン、写真の枠のピン（どの時代でも押せるように）は必ず出す
   function layout() {
     dirty = false;
     lastLayout = performance.now();
@@ -162,7 +163,7 @@ export function createPins(app, world, sites) {
     const list = [...pins.values()].filter((p) => p.on).sort((a, b) => rank(a) - rank(b) || a.n - b.n);
     placed.length = 0;
     for (const p of list) {
-      const forced = p.s === sel || p === A.pin;
+      const forced = p.s === sel || p === A.pin || !!p.s.scenes;
       let state;
       if (!forced && r >= p.show) state = 'far';
       else {
