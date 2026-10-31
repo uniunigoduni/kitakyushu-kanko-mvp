@@ -6,6 +6,7 @@ import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { formatYear } from '../eras.js';
 import { h, svg } from '../util.js';
 import { shortYear } from './band.js';
+import { adIcon, iconOf } from './ads.js';
 
 // ピンの頭の幅・高さと軸の高さ（css/style.css の .pin.lv* などと同じ値）。頭の中心は根元から軸の高さだけ上
 const GEOM = {
@@ -15,10 +16,11 @@ const GEOM = {
   special: { w: 26, h: 26, stem: 20 }, // 特別演出のある史跡
   frame: { w: 62, h: 40, stem: 34 },   // 写真の枠のピン（時代ごとの場面がある場所）
   dummy: { w: 8, h: 8, stem: 0 },      // MVP 用のダミー
+  ad: { w: 24, h: 24, stem: 17 },      // 広告（しずく形の先が根元）
 };
 // 一押しの史跡（pick）は、出す順では最大レベルのまま、大きさは中のピンにして色で見分ける。
 // 現代の地図に出すとき（today）は、特別演出のある史跡も中のピンにそろえる
-export const geomOf = (s, today = false) => GEOM[s.scenes ? 'frame' : s.special && !today ? 'special' : s.dummy ? 'dummy' : s.pick ? 2 : s.level];
+export const geomOf = (s, today = false) => GEOM[s.scenes ? 'frame' : s.special && !today ? 'special' : s.dummy ? 'dummy' : s.ad ? 'ad' : s.pick ? 2 : s.level];
 // ピンに添える短い名前：「戦時中の門司港：出征の港と空襲」→「戦時中の門司港」
 export const pinLabel = (name) => name.split('：')[0].replace(/（[^）]*）/g, '');
 // 一押しの史跡は、その時代に加えて現代の地図にも「いまの姿」として出す
@@ -27,13 +29,14 @@ export const isToday = (s, era) => !!s.pick && era?.id === 'now' && !s.eras.incl
 // 年がはっきりしない伝承などは、データの yearShort（「平安末期」など）をそのまま使う
 export const yearTag = (s) => s.yearShort ?? shortYear(s.yearLabel ?? '').match(/^前?\d+(?:〜\d+)?年頃?/)?.[0] ?? `${formatYear(s.year)}年`;
 
-// 置く順（小さいほど先）：写真の枠 → 特別演出 → 最大レベル → 中 → 小 → ダミー。同じレベルは注目の史跡が先
-const tierOf = (s) => (s.scenes ? 0 : s.special ? 1 : s.dummy ? 8 : (3 - s.level) * 2 + (s.featured ? 2 : 3));
+// 置く順（小さいほど先）：写真の枠 → 特別演出 → 最大レベル → 中 → 小 → 広告 → ダミー。同じレベルは注目の史跡が先
+const tierOf = (s) => (s.scenes ? 0 : s.special ? 1 : s.dummy ? 8 : s.ad ? 7.5 : (3 - s.level) * 2 + (s.featured ? 2 : 3));
 // 出す近さ（ホームの距離に対する比がこれより小さいとき）。注目の史跡と中・最大レベルはいつでも出す
 const SMALL_R = 0.6, NAME_R = 0.4;        // 小さいピン、その名前
 const DUMMY_R = 0.36, DUMMY_NAME_R = 0.2; // ダミーのピン、その名前
-const showUnder = (s) => (s.dummy ? DUMMY_R : s.level < 2 && !s.featured ? SMALL_R : Infinity);
-const nameUnder = (s) => (s.dummy ? DUMMY_NAME_R : s.level < 2 && !s.featured ? NAME_R : Infinity);
+const AD_R = 0.6, AD_NAME_R = 0.45;       // 広告のピン、その名前
+const showUnder = (s) => (s.dummy ? DUMMY_R : s.ad ? AD_R : s.level < 2 && !s.featured ? SMALL_R : Infinity);
+const nameUnder = (s) => (s.dummy ? DUMMY_NAME_R : s.ad ? AD_NAME_R : s.level < 2 && !s.featured ? NAME_R : Infinity);
 // 重なりの判定の余白。出ているピンは少しの重なりまで許し、隠れているピンは余裕ができてから出す（ちらつかないように）
 const PAD_KEEP = 2, PAD_SHOW = 8;
 // 大事なピンどうしの頭は、もっと近くまで並べてよい（寄りきれば、近くの一押しの史跡が画面の奥のほうでも両方出る）
@@ -50,7 +53,7 @@ export function createPins(app, world, sites) {
     const head = h('span', { class: 'pin-head' });
     const label = h('span', { class: 'pin-name', text: pinLabel(s.name) });
     const hit = h('button', { class: 'pin-hit', type: 'button', tabindex: -1, 'aria-label': s.name }, head, label);
-    const kind = (s.scenes ? ' is-frame' : s.special ? ' is-special' : s.dummy ? ' is-dummy' : '') + (s.pick ? ' is-pick' : '');
+    const kind = (s.scenes ? ' is-frame' : s.special ? ' is-special' : s.dummy ? ' is-dummy' : s.ad ? ' is-ad' : '') + (s.pick ? ' is-pick' : '');
     const el = h('div', { class: `pin lv${s.level}${kind} is-off` }, h('i', { class: 'pin-shadow' }), h('i', { class: 'pin-stem' }), hit);
     const obj = new CSS2DObject(el);
     obj.position.copy(world.at(s.lon, s.lat, 0.4));
@@ -67,6 +70,7 @@ export function createPins(app, world, sites) {
       head.append(p.img);
       setFrame(p, s.pano);
     }
+    if (s.ad) setAd(p);
     hit.addEventListener('click', () => app.selectSite(s.id, { from: 'map' }));
     hit.addEventListener('pointerenter', () => { if (A.pin === p && A.drawn) g.classList.remove('is-dim'); });
     hit.addEventListener('pointerleave', () => { if (A.pin === p && A.drawn) g.classList.add('is-dim'); });
@@ -81,6 +85,16 @@ export function createPins(app, world, sites) {
     const im = new Image();
     im.onload = () => { if (p.src === src) p.img.src = src; };
     im.src = src;
+  }
+
+  // 広告のピンは、しずく形の中に業種のアイコン。名前は店名だけにして（業種はアイコンで見分ける）、「広告」の札を添える。
+  // 登録した長い店名（自分の広告の見本）は、途中から「…」で省く
+  function setAd(p) {
+    const s = p.s;
+    p.head.replaceChildren(adIcon(iconOf(s)));
+    p.label.replaceChildren(h('span', { class: 'pin-ad-name', text: s.short ?? pinLabel(s.name) }), h('span', { class: 'pin-ad', text: '広告' }));
+    p.hit.setAttribute('aria-label', `${s.name}（広告）`);
+    p.w = 0;
   }
 
   // 現代の地図に出す一押しの史跡は、いまの名前に、さかのぼる先の年を添える
@@ -100,27 +114,29 @@ export function createPins(app, world, sites) {
   const fadeIn = new Set();
   let dirty = true, needMeasure = true;
   function setEra(era) {
-    for (const p of pins.values()) {
-      const today = isToday(p.s, era);
-      if (today !== p.today) setToday(p, today);
-      const on = p.s.eras.includes(era.id) || today;
-      if (on === p.on) continue;
-      p.on = on;
-      clearTimeout(p.offTimer);
-      if (on) {
-        // 描き始めてから is-off を外すと、ふわっと出る
-        p.obj.visible = true;
-        fadeIn.add(p);
-      } else {
-        fadeIn.delete(p);
-        p.el.classList.add('is-off');
-        p.hit.tabIndex = -1;
-        p.state = '';
-        p.offTimer = setTimeout(() => { if (!p.on) p.obj.visible = false; }, 200);
-      }
-    }
+    for (const p of pins.values()) turn(p, era);
     needMeasure = true;
     dirty = true;
+  }
+  // その時代に出すピンを出し、出さないピンをしまう
+  function turn(p, era) {
+    const today = isToday(p.s, era);
+    if (today !== p.today) setToday(p, today);
+    const on = p.s.eras.includes(era.id) || today;
+    if (on === p.on) return;
+    p.on = on;
+    clearTimeout(p.offTimer);
+    if (on) {
+      // 描き始めてから is-off を外すと、ふわっと出る
+      p.obj.visible = true;
+      fadeIn.add(p);
+    } else {
+      fadeIn.delete(p);
+      p.el.classList.add('is-off');
+      p.hit.tabIndex = -1;
+      p.state = '';
+      p.offTimer = setTimeout(() => { if (!p.on) p.obj.visible = false; }, 200);
+    }
   }
 
   // ---------- ズームと重なり ----------
@@ -453,5 +469,14 @@ export function createPins(app, world, sites) {
     position: (id) => pins.get(id)?.obj.position,
     // 現代へ戻ったとき、いまの場所のピンを弾ませる
     pop(id) { const p = pins.get(id); if (p) pop(p); },
+    // 中身や出す時代を変えたピンを描き直す（自分の広告の見本の店名・業種）
+    refresh(id) {
+      const p = pins.get(id);
+      if (!p) return;
+      if (p.s.ad) setAd(p);
+      if (app.era) turn(p, app.era);
+      needMeasure = true;
+      dirty = true;
+    },
   };
 }

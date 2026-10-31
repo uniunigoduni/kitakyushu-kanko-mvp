@@ -42,7 +42,7 @@ function timelineData(raw, sites) {
   let detail = (raw?.detail ?? [])
     .map((d) => ({ year: Number(d.year), era: d.era, text: d.text ?? d.label ?? d.title, siteId: d.siteId ?? d.site }))
     .filter((d) => Number.isFinite(d.year) && d.text);
-  if (!detail.length) detail = sites.filter((s) => !s.dummy).map((s) => ({ year: s.year, era: s.eras[0], text: s.name, siteId: s.id }));
+  if (!detail.length) detail = sites.filter((s) => !s.dummy && !s.ad).map((s) => ({ year: s.year, era: s.eras[0], text: s.name, siteId: s.id }));
   return { major, detail };
 }
 
@@ -53,13 +53,15 @@ function fail(message, err) {
 }
 
 let geo, world;
-const [geoResult, sitesData, timelineRaw, arData, dummyData] = await Promise.all([
+const [geoResult, sitesData, timelineRaw, arData, dummyData, adsData] = await Promise.all([
   loadGeo('data/').catch((err) => err),
   loadJSON('data/sites.json', { sites: [] }),
   loadJSON('data/timeline.json', null),
   loadJSON('data/ar.json', { sites: {}, panos: {} }),
   // MVP 用のダミーの小さいピン（実在の史跡ではない。tools/build_dummy_pins.py）
   loadJSON('data/dummy_pins.json', { sites: [] }),
+  // ピン型の広告の見本（架空のお店。現代の地図にだけ出す）
+  loadJSON('data/ads.json', { ads: [] }),
 ]);
 if (geoResult instanceof Error) {
   fail('地図のデータを読み込めませんでした。ページを読み込み直してください。', geoResult);
@@ -71,7 +73,9 @@ if (geoResult instanceof Error) {
     fail('この端末では立体の地図を表示できませんでした。別のブラウザか、パソコンで開いてください。', err);
   }
 }
-if (world) start(world, [...(sitesData?.sites ?? []), ...(dummyData?.sites ?? []).map((s) => ({ ...s, dummy: true }))], arData);
+// 広告は小さいピンと同じく寄ったときに出す。自分の広告の見本（preview）は、お店として登録するまでどの時代にも出さない
+const ads = (adsData?.ads ?? []).map((a) => ({ level: 1, year: NOW_YEAR, yearLabel: '広告', eras: a.preview ? [] : ['now'], ...a, ad: true }));
+if (world) start(world, [...(sitesData?.sites ?? []), ...(dummyData?.sites ?? []).map((s) => ({ ...s, dummy: true })), ...ads], arData);
 
 function start(world, sites, arData) {
   // 360度の画像がある史跡にだけ「ARで探検」を出す。
@@ -165,12 +169,12 @@ function start(world, sites, arData) {
   }
 
   // ---------- 史跡を選ぶ ----------
-  // 吹き出しが下に収まるよう、ピンを地図の窓の上寄り（高さ 28%）・左右の真ん中に置く視点
-  function viewFor(s) {
+  // 吹き出しが下に収まるよう、ピンを地図の窓の上寄り（高さ 28%）・左右の真ん中に置く視点。dist より遠ければ寄る
+  function viewFor(s, dist = world.home.distance * 0.55) {
     const pos = pins.position(s.id);
     const c = world.controls;
     const { H } = world.size;
-    const d = Math.min(c.distance, world.home.distance * 0.55);
+    const d = Math.min(c.distance, dist);
     const polar = c.polarAngle, az = c.azimuthAngle;
     const upp = (2 * d * Math.tan((world.camera.fov * Math.PI) / 360)) / H;
     const shift = ((0.5 - 0.28) * H * upp) / Math.max(0.35, Math.cos(polar));
@@ -178,10 +182,11 @@ function start(world, sites, arData) {
   }
   const eraOfSite = (s) => ERA_BY_ID[s.eras.find((id) => s.year >= ERA_BY_ID[id].start && s.year < ERA_BY_ID[id].end) ?? s.eras[0]];
 
-  async function selectSite(id, { from = 'list' } = {}) {
+  async function selectSite(id, { from = 'list', dist } = {}) {
     const s = app.byId.get(id);
-    if (!s) return;
-    if (app.selected === s) { if (from !== 'map') world.view(viewFor(s)); return; }
+    if (!s || !s.eras.length) return; // まだ出していない自分の広告の見本
+    if (s.ad) dist ??= world.home.distance * 0.1; // 広告は、まわりの通りが見えるところまで寄って開く
+    if (app.selected === s) { if (from !== 'map') world.view(viewFor(s, dist)); return; }
     if (isToday(s, app.era)) {
       // 現代の地図の一押しの史跡：その場所へ寄りながら、年を数えてその年までさかのぼる
       deselect();
@@ -191,16 +196,16 @@ function start(world, sites, arData) {
       if (!(await travel.go(s, clamp(yearToT(s.year + 0.5), e.t0 + m, e.t1 - m)))) return;
       from = 'travel';
     } else if (!s.eras.includes(app.era.id)) {
-      // その史跡の時代へ移ってから開く
+      // その史跡の時代へ移ってから開く（広告は今年へ）
       deselect();
       const e = eraOfSite(s);
       const pad = (e.t1 - e.t0) * 0.08;
-      if (!(await animateT(clamp(yearToT(s.year), e.t0 + pad, e.t1 - pad)))) return;
+      if (!(await animateT(s.ad ? T_NOW : clamp(yearToT(s.year), e.t0 + pad, e.t1 - pad)))) return;
     }
     app.selected = s;
     app.emit('select', s);
     // 地図の上で押したとき（さかのぼってきたときも）は、吹き出しが収まらない場合だけ視点を動かす
-    if ((from !== 'map' && from !== 'travel') || popup.cramped) world.view(viewFor(s));
+    if ((from !== 'map' && from !== 'travel') || popup.cramped) world.view(viewFor(s, dist));
   }
   // 一押しの史跡の吹き出しから、年を数えながら現代へ戻る。戻ったら、いまの場所のピンを弾ませる
   async function backToNow(s) {
@@ -227,9 +232,26 @@ function start(world, sites, arData) {
   // 会員登録（見た目だけのデモ）。右上のボタンは時代の絵より先に置く（絵はボタンの手前で終わる）
   const account = createAccount(app, world);
   app.openAccount = (type) => account.open(type);
+  // お店として登録した人の、自分の広告の見本：登録した店名と業種で地図に出し、寄って開く
+  app.showAdPreview = () => {
+    const u = app.user, s = app.byId.get('ad_preview');
+    if (u?.type !== 'shop' || !s) return;
+    Object.assign(s, { name: u.name, kind: u.kind || 'そのほか', eras: ['now'] });
+    pins.refresh(s.id);
+    if (app.selected === s) deselect(); // 開いたままなら、新しい中身で開き直す
+    selectSite(s.id, { from: 'preview' });
+  };
+  // ログアウトしたら（お店でなくなったら）見本をしまう
+  app.on('user', (u) => {
+    const s = app.byId.get('ad_preview');
+    if (!s?.eras.length || u?.type === 'shop') return;
+    if (app.selected === s) deselect();
+    s.eras = [];
+    pins.refresh(s.id);
+  });
   // 吹き出しを開いたら、360度の画像を先に読み込んでおく
   app.on('select', (s) => { if (s.pano) ar.preload(s.pano).catch(() => {}); });
-  createBand(app, sites.filter((s) => !s.dummy)); // ダミーのピンは一覧に出さない
+  createBand(app, sites.filter((s) => !s.dummy && !s.ad)); // ダミーのピンと広告は一覧に出さない
   createTimeline(app, { major, detail });
   createFlavor(app);
 
@@ -252,7 +274,8 @@ function start(world, sites, arData) {
   // ---------- 最初の画面 ----------
   const linkEra = ERA_BY_ID[params.get('era')];
   const linkT = params.has('t') ? clamp(Number(params.get('t')) || 0, 0, 1) : null;
-  const linkSite = app.byId.get(params.get('site'));
+  const linked = app.byId.get(params.get('site'));
+  const linkSite = linked?.eras.length ? linked : null; // まだ出していない自分の広告の見本は開かない
   const deepLink = !!(linkEra || linkT != null || linkSite);
   const playIntro = !deepLink && params.get('intro') !== '0' && !reducedMotion();
 

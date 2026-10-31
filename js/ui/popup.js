@@ -2,6 +2,7 @@
 // 別のピンを選ぶと、前の吹き出しは消して新しい中身に入れ替える。
 import { clamp, h, isPaid, paidUntil } from '../util.js';
 import { pinLabel } from './pins.js';
+import { adCard } from './ads.js';
 
 const M = 8;     // 地図の窓の縁からの余白
 const GAP = 14;  // ピンと吹き出しの間（しっぽの分）
@@ -24,6 +25,19 @@ export function createPopup(app, world, pins) {
   const box = [0, 0, 0, 0]; // 置いた四角 [x0, y0, x1, y1]（地図の窓の中の px）
 
   function fill(s) {
+    el.classList.toggle('is-ad', !!s.ad);
+    if (s.ad) {
+      // 広告：お店の名前とボタン、紹介文、特典と営業時間。下の帯は、架空のお店であること（自分の見本なら掲載前であること）と、お店の方への入口
+      const card = adCard(app, s);
+      clearTimeout(paidTimer);
+      scroll.replaceChildren(card.body);
+      scroll.scrollTop = 0;
+      foot.classList.add('ad-foot');
+      foot.hidden = false;
+      foot.replaceChildren(...card.foot);
+      return;
+    }
+    foot.classList.remove('ad-foot');
     el.classList.toggle('no-ar', !s.pano);
     const ar = s.pano && h('button', { class: 'popup-ar', type: 'button', onclick: (e) => app.openAR(s, e.currentTarget.querySelector('img')) },
       h('img', { src: `assets/pano/${s.pano}_thumb.jpg`, alt: '', decoding: 'async' }),
@@ -144,6 +158,8 @@ export function createPopup(app, world, pins) {
   // 時代を動かして、その史跡がない時代に入ったら閉じる
   app.on('era', (era) => { if (cur && !cur.eras.includes(era.id)) app.deselect(); });
   app.on('paid', (s) => { if (cur === s) { fillFoot(s); measure(); place(); } });
+  // 広告の下の帯は、お店として登録しているかで入口が変わる
+  app.on('user', () => { if (cur?.ad) { fill(cur); measure(); place(); } });
   // 時代ごとの場面がある史跡は、年を動かしたら AR の切り抜きもその場面にする
   app.on('scene', (s) => {
     const img = cur === s && scroll.querySelector('.popup-ar img');
