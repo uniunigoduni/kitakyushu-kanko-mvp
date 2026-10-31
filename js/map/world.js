@@ -84,6 +84,16 @@ export async function createWorld(container, geo) {
   const scene = new THREE.Scene();
   scene.background = shared.uBg.value;
   const camera = new THREE.PerspectiveCamera(30, 1, 4, 9000);
+  // 手前の切り口（near）は引くほど遠くへ。4 のままだと、引いたときに奥行きの細かさが足りず、
+  // 水面のすぐ下に沈めた埋め立て地が海から縞になって透ける。いちばん高い山より上の範囲でだけ動かす
+  let topY = 0;
+  for (const y of geo.y) if (y > topY) topY = y;
+  function fitNear() {
+    const n = Math.max(4, Math.min(controls.distance * 0.05, (camera.position.y - topY - 20) * 0.8));
+    if (Math.abs(n - camera.near) < camera.near * 0.02) return;
+    camera.near = n;
+    camera.updateProjectionMatrix();
+  }
 
   const hemi = new THREE.HemisphereLight(0xdfe6ea, 0x5d5240, 1.3);
   const sun = new THREE.DirectionalLight(0xfff0d8, 2.8);
@@ -516,6 +526,7 @@ export async function createWorld(container, geo) {
     shared.uTime.value = time;
     const moved = controls.update(dt);
     if (moved) { lastMove = now; updateShadow(now); }
+    fitNear();
     stepCoast(dt);
     for (const f of hooks) f(dt, time);
     updateLabels();
