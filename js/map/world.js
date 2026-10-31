@@ -165,7 +165,7 @@ export async function createWorld(container, geo) {
   controls.maxPolarAngle = 1.134;
   controls.minAzimuthAngle = -Math.PI / 2;
   controls.maxAzimuthAngle = Math.PI / 2;
-  controls.minDistance = 120;
+  controls.minDistance = 90; // いちばん寄ると、50m ほどしか離れていない史跡のピンも重ならずに並ぶ近さ
   controls.maxDistance = 3600;
   const mb = geo.mojiBox;
   controls.setBoundary(new THREE.Box3(new THREE.Vector3(mb.x0 - 160, -20, mb.z0 - 160), new THREE.Vector3(mb.x1 + 160, 120, mb.z1 + 160)));
@@ -556,18 +556,57 @@ export async function createWorld(container, geo) {
     controls.normalizeRotations();
     return controls.setLookAt(...homePosition(), home.target.x, home.target.y, home.target.z, smooth);
   }
+  // 寄るときに、カメラが山にめりこまないように。カメラは c0 から a へ向かって、a からの距離が k 倍のところまで進む。
+  // 途中でカメラの真下の地面から CLEAR より近くなるなら、その手前で止める（止めたところの倍率を返す。1 なら進めない）
+  const CLEAR = 12, _cw = new THREE.Vector3(), _c0 = new THREE.Vector3(), _t0 = new THREE.Vector3();
+  function clearK(c0, a, k) {
+    for (let j = 1; j > k;) {
+      const j2 = Math.max(k, j - 0.02);
+      _cw.copy(c0).sub(a).multiplyScalar(j2).add(a);
+      if (_cw.y < geo.groundAt(_cw.x, _cw.z) + CLEAR) return j;
+      j = j2;
+    }
+    return k;
+  }
   // ボタンで寄る・引く（k < 1 で寄る）。続けて押したときは、動いている途中でも行き先の距離から数える
   const _sph = new THREE.Spherical();
   function zoom(k, smooth = true) {
     atHome = false;
     wake();
-    return controls.dollyTo(controls.getSpherical(_sph).radius * k, smooth);
+    const r = controls.getSpherical(_sph).radius;
+    if (k < 1) k = clearK(controls.getPosition(_c0), controls.getTarget(_t0), Math.max(k, controls.minDistance / r));
+    return controls.dollyTo(r * k, smooth);
   }
-  // その向きにまだ動けるか（行き先が近さ・遠さの端に着いていたら false）
+  // その向きにまだ動けるか（行き先が近さ・遠さの端に着いていたら false。寄る向きは、山にぶつかるときも false）
   function canZoom(k) {
     const r = controls.getSpherical(_sph).radius;
-    return k < 1 ? r > controls.minDistance + 0.5 : r < controls.maxDistance - 0.5;
+    if (k >= 1) return r < controls.maxDistance - 0.5;
+    return r > controls.minDistance + 0.5 && clearK(controls.getPosition(_c0), controls.getTarget(_t0), Math.max(k, controls.minDistance / r)) < 1;
   }
+  // ホイール・2本指・トラックパッドのピンチで寄る・引くときは、カーソルの下の地面が動かないように中心も動かす。
+  // camera-controls の dollyToCursor は画面に平行な面の上で中心を動かすので、斜めに見下ろすこの地図では
+  // 中心が空中に浮いたり地面に沈んだりして、いちばん寄っても地面が遠いままになる。中心はいまの高さの面から出さない
+  // 山にぶつかるときは、その手前で止める
+  const _g0 = new THREE.Vector3();
+  controls._dollyInternal = (delta, x, y) => {
+    const s = controls.getSpherical(_sph);
+    const r0 = s.radius;
+    const r1 = clamp(r0 * Math.pow(0.95, -delta * controls.dollySpeed), controls.minDistance, controls.maxDistance);
+    if (Math.abs(r1 - r0) < 1e-3) return;
+    const t = controls.getTarget(_t0);
+    probe.copy(camera);
+    placeCamera(probe, t, s.phi, s.theta, r0);
+    const g = toGroundWith(probe, ((x + 1) / 2) * W, ((1 - y) / 2) * H, t.y, _g0);
+    let k = r1 / r0;
+    if (k < 1 && (k = clearK(controls.getPosition(_c0), g, k)) === 1) return;
+    controls._dollyToNoClamp(r0 * k, true);
+    controls.moveTo(g.x + (t.x - g.x) * k, t.y, g.z + (t.z - g.z) * k, true);
+    // 距離と中心を同じ速さで動かす（ずれると、動いている途中でカーソルの下が流れる）
+    controls._isUserControllingDolly = true;
+    controls._isUserControllingTruck = true;
+  };
+  // ctrl＋ホイール（トラックパッドのピンチ）も、レンズのズームではなく同じ寄り引きにする
+  controls._zoomInternal = (delta, x, y) => controls._dollyInternal(delta, x, y);
   function at(lon, lat, lift = 0) {
     const [x, z] = geo.toXZ(lon, lat);
     return new THREE.Vector3(x, Math.max(0, geo.heightAt(x, z)) + lift, z);

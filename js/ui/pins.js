@@ -1,5 +1,6 @@
 // 地図の上のピン。時代の区切りでだけ入れ替え、ズームに合わせて小さいピンを出し入れする。
 // 大事なピンから順に置き、先に置いたピンと重なるピンは名前を隠すか、ピンごと隠す（HOI4 の都市のように、寄るほど増える）。
+// 名前は右に出し、右がふさがっていれば左に出す。
 // 時代ごとの注目の史跡には、赤ペンで描いたような矢印を一度だけ引く。
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { formatYear } from '../eras.js';
@@ -35,6 +36,10 @@ const showUnder = (s) => (s.dummy ? DUMMY_R : s.level < 2 && !s.featured ? SMALL
 const nameUnder = (s) => (s.dummy ? DUMMY_NAME_R : s.level < 2 && !s.featured ? NAME_R : Infinity);
 // 重なりの判定の余白。出ているピンは少しの重なりまで許し、隠れているピンは余裕ができてから出す（ちらつかないように）
 const PAD_KEEP = 2, PAD_SHOW = 8;
+// 大事なピンどうしの頭は、もっと近くまで並べてよい（寄りきれば、近くの一押しの史跡が画面の奥のほうでも両方出る）
+const PAD_KEEP_MAJOR = 0, PAD_SHOW_MAJOR = 3;
+// 画面の外にあるピンは重なりを調べない（名前がはみ出して見える分だけ、外も含める）
+const OFF = 160;
 // 赤い矢印の引き始め（ピンの頭から見た位置。上から順に、それぞれ短くしたものも試す）
 const STARTS = [[-108, -84], [-132, -40], [108, -84], [-140, 24], [-108, 84], [-60, 120], [108, 84]];
 const SCALES = [1, 0.72];
@@ -54,6 +59,9 @@ export function createPins(app, world, sites) {
     obj.renderOrder = 10 - tier; // 大事なピンほど上に重ねる
     world.pinScene.add(obj);
     const p = { s, g: geomOf(s), el, hit, head, label, obj, tier, n: pins.size, show: showUnder(s), name: nameUnder(s), on: false, today: false, state: '', w: 0, offTimer: 0 };
+    // 大事なピン（頭を先に置く）：最大レベル・注目・一押し・特別演出・写真の枠
+    p.major = !s.dummy && (s.level >= 3 || !!s.featured || !!s.special || !!s.scenes || !!s.pick);
+    p.forced = false; p.left = false; p.q = { x: 0, y: 0 };
     if (s.scenes) {
       p.img = h('img', { alt: '', decoding: 'async' });
       head.append(p.img);
@@ -122,9 +130,11 @@ export function createPins(app, world, sites) {
     out[0] = q.x - w / 2 - 2; out[1] = cy - hh / 2 - 2; out[2] = q.x + w / 2 + 2; out[3] = cy + hh / 2 + 2;
     return out;
   };
-  const nameRect = (p, q, out) => {
-    const { w, stem } = p.g, cy = q.y - stem;
-    out[0] = q.x + w / 2; out[1] = cy - 10; out[2] = q.x - w / 2 + Math.max(p.w, w) + 4; out[3] = cy + 10;
+  // 名前は頭の右（left のときは左）。p.w は頭＋間＋名前の幅
+  const nameRect = (p, q, left, out) => {
+    const { w, stem } = p.g, cy = q.y - stem, len = Math.max(p.w, w) - w + 4;
+    out[0] = left ? q.x - w / 2 - len : q.x + w / 2; out[1] = cy - 10;
+    out[2] = left ? q.x - w / 2 : q.x + w / 2 + len; out[3] = cy + 10;
     return out;
   };
   const stemRect = (p, q, out) => {
@@ -144,14 +154,34 @@ export function createPins(app, world, sites) {
     needMeasure = missing;
   }
 
+  // 置いた四角。own を渡したときは、そのピン自身の頭と軸とは比べない
   const placed = [];
-  const hits = (b, pad) => {
-    for (const a of placed) if (b[0] < a[2] + pad && b[2] > a[0] - pad && b[1] < a[3] + pad && b[3] > a[1] - pad) return true;
+  const over = (a, b, pad) => b[0] < a[2] + pad && b[2] > a[0] - pad && b[1] < a[3] + pad && b[3] > a[1] - pad;
+  // only を渡すと、その条件に合うピンとだけ調べる
+  const hits = (b, pad, own, only) => {
+    for (const a of placed) if (a.p !== own && (!only || only(a.p)) && over(a, b, pad)) return true;
     return false;
   };
+  const put = (b, p) => { b.p = p; placed.push(b); };
+  // b とぶつかる、必ず出すピン以外のピンを隠す（置いた頭と軸を取り除く）
+  const evict = (b, own) => {
+    for (let i = placed.length - 1; i >= 0; i--) {
+      const q = placed[i]?.p;
+      if (!q || q === own || q.forced || !over(placed[i], b, PAD_KEEP)) continue;
+      for (let j = placed.length - 1; j >= 0; j--) if (placed[j].p === q) placed.splice(j, 1);
+      q.evicted = true;
+      setState(q, 'crowded');
+      i = placed.length;
+    }
+  };
+  // 名前が地図の端からはみ出すか（はみ出す側には出さない）
+  const outside = (b) => b[0] < -4 || b[2] > world.size.W + 4;
   const Q = {};
   let lastR = -1, lastLayout = 0;
-  // 大事なピンから順に置く。選んでいるピンと矢印のピン、写真の枠のピン（どの時代でも押せるように）は必ず出す
+  // 大事なピンから順に置く。選んでいるピンと矢印のピン、写真の枠のピン（どの時代でも押せるように）は必ず出す。
+  // 選んでいる間は矢印を隠すので、矢印のピンも重なれば隠す（現代の門司港駅と、同じ場所の「保存修理完了」など）。
+  // 大事なピンは頭だけを先にすべて置き、名前はそのあとで空いている側に出す（ほかの名前のせいで頭が消えないように。
+  // 寄りきれば、50m ほどしか離れていない一押しの史跡も両方出る）。小さいピンとダミーは、そのあとで 1 本ずつ置く
   function layout() {
     dirty = false;
     lastLayout = performance.now();
@@ -162,29 +192,58 @@ export function createPins(app, world, sites) {
     const rank = (p) => (p.s === sel ? -2 : p === A.pin ? -1 : p.tier);
     const list = [...pins.values()].filter((p) => p.on).sort((a, b) => rank(a) - rank(b) || a.n - b.n);
     placed.length = 0;
+    const named = [];
     for (const p of list) {
-      const forced = p.s === sel || p === A.pin || !!p.s.scenes;
-      let state;
-      if (!forced && r >= p.show) state = 'far';
-      else {
-        const wantName = forced || r < p.name;
-        world.project(p.obj.position, Q);
-        if (!Q.visible) state = wantName ? 'full' : 'dot';
-        else {
-          const pad = p.state === 'full' || p.state === 'dot' ? PAD_KEEP : PAD_SHOW;
-          const hr = headRect(p, Q, [0, 0, 0, 0]);
-          if (!forced && hits(hr, pad)) state = 'crowded';
-          else {
-            const nr = nameRect(p, Q, [0, 0, 0, 0]);
-            state = wantName && (forced || !hits(nr, pad)) ? 'full' : 'dot';
-            placed.push(hr);
-            if (state === 'full') placed.push(nr);
-            if (p.g.stem > p.g.h / 2) placed.push(stemRect(p, Q, [0, 0, 0, 0]));
-          }
-        }
-      }
-      setState(p, state);
+      p.forced = p.s === sel || (p === A.pin && !sel) || !!p.s.scenes;
+      p.evicted = false;
+      if ((p.major || p.forced) && placeHead(p, r)) named.push(p);
     }
+    for (const p of named) if (!p.evicted) placeName(p, r);
+    for (const p of list) if (!p.major && !p.forced && placeHead(p, r)) placeName(p, r);
+  }
+  // 頭と軸を置く。名前まで置くときは true を返し、根元の位置を p.q に残す
+  function placeHead(p, r) {
+    if (!p.forced && r >= p.show) { setState(p, 'far'); return false; }
+    world.project(p.obj.position, Q);
+    const { W, H } = world.size;
+    if (!Q.visible || Q.x < -OFF || Q.x > W + OFF || Q.y < -OFF || Q.y > H + OFF) { setState(p, p.forced || r < p.name ? 'full' : 'dot'); return false; }
+    const kept = p.state === 'full' || p.state === 'dot';
+    const pad = p.major ? (kept ? PAD_KEEP_MAJOR : PAD_SHOW_MAJOR) : kept ? PAD_KEEP : PAD_SHOW;
+    const hr = headRect(p, Q, [0, 0, 0, 0]);
+    if (!p.forced && hits(hr, pad)) { setState(p, 'crowded'); return false; }
+    put(hr, p);
+    if (p.g.stem > p.g.h / 2) put(stemRect(p, Q, [0, 0, 0, 0]), p);
+    p.q.x = Q.x; p.q.y = Q.y;
+    return true;
+  }
+  // 名前を右に、ふさがっていれば左に出す。どちらにも入らなければ名前を隠す（必ず出すピンは、いまの側に出す）
+  function placeName(p, r) {
+    if (!p.forced && r >= p.name) { setState(p, 'dot'); return; }
+    for (const left of [false, true]) {
+      const nr = nameRect(p, p.q, left, [0, 0, 0, 0]);
+      if (outside(nr) || hits(nr, p.state === 'full' && p.left === left ? PAD_KEEP : PAD_SHOW, p)) continue;
+      setSide(p, left);
+      put(nr, p);
+      setState(p, 'full');
+      return;
+    }
+    if (!p.forced) { setState(p, 'dot'); return; }
+    // 必ず出すピンは、両側ともふさがっていても名前を出す。ほかの必ず出すピン（写真の枠など）とぶつからない側に出し、
+    // そこにあるほかのピンは隠す。どちらの側もほかの必ず出すピンとぶつかるときは、選んでいるピンのほかは名前を隠す
+    // （写真の枠は写真で見分けがつく）
+    const free = (left) => { const b = nameRect(p, p.q, left, [0, 0, 0, 0]); return !outside(b) && !hits(b, PAD_KEEP, p, (q) => q.forced); };
+    const left = free(false) ? false : free(true) ? true : null;
+    if (left === null && p.s !== app.selected) { setState(p, 'dot'); return; }
+    const nr = nameRect(p, p.q, !!left, [0, 0, 0, 0]);
+    evict(nr, p);
+    setSide(p, !!left);
+    put(nr, p);
+    setState(p, 'full');
+  }
+  function setSide(p, left) {
+    if (p.left === left) return;
+    p.left = left;
+    p.el.classList.toggle('is-left', left);
   }
   function setState(p, st) {
     if (st === p.state) return;
@@ -204,7 +263,8 @@ export function createPins(app, world, sites) {
       world.project(p.obj.position, Q);
       if (!Q.visible) continue;
       const { w, h: hh, stem } = p.g, cy = Q.y - stem, half = Math.max(12, hh / 2 + 2);
-      out.push([Q.x - w / 2 - 4, cy - half, Q.x - w / 2 + (p.state === 'full' ? Math.max(p.w, w) : w) + 4, cy + half]);
+      const len = p.state === 'full' ? Math.max(p.w, w) - w : 0;
+      out.push([Q.x - w / 2 - 4 - (p.left ? len : 0), cy - half, Q.x + w / 2 + 4 + (p.left ? 0 : len), cy + half]);
       if (stem > hh / 2) out.push([Q.x - 9, cy + hh / 2, Q.x + 9, Q.y + 4]);
     }
     return out;
@@ -292,7 +352,7 @@ export function createPins(app, world, sites) {
     const { W, H } = world.size;
     const hw = p.g.w;
     const avoid = pinRects(world.labelRects(), p);
-    if (p.w) avoid.push([P.x + hw / 2, P.y - 11, P.x - hw / 2 + p.w, P.y + 11]);
+    if (p.w) avoid.push(p.left ? [P.x + hw / 2 - p.w, P.y - 11, P.x - hw / 2, P.y + 11] : [P.x + hw / 2, P.y - 11, P.x - hw / 2 + p.w, P.y + 11]);
     const inWin = ([dx, dy]) => P.x + dx > 16 && P.x + dx < W - 16 && P.y + dy > 16 && P.y + dy < H - 16;
     const clear = ([dx, dy]) => {
       for (let i = 0; i < 12; i++) {
