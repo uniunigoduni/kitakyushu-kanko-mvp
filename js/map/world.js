@@ -539,6 +539,7 @@ export async function createWorld(container, geo) {
 
   // ---------- 視点を動かす ----------
   function view({ target, distance, polar, azimuth }, smooth = true) {
+    atHome = false; // 窓の大きさが変わっても、いつもの視点へ戻さない
     const t = new THREE.Vector3(...(Array.isArray(target) ? target : [target.x, target.y, target.z]));
     placeCamera(probe, t, polar ?? controls.polarAngle, azimuth ?? controls.azimuthAngle, distance ?? controls.distance);
     const p = probe.position;
