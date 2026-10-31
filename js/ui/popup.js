@@ -21,6 +21,7 @@ export function createPopup(app, world, pins) {
   let side = '', w = 0, natH = 0, shrink = 0, cramped = false;
   const P = {};
   const last = { x: NaN, y: NaN, W: 0, H: 0 };
+  const box = [0, 0, 0, 0]; // 置いた四角 [x0, y0, x1, y1]（地図の窓の中の px）
 
   function fill(s) {
     el.classList.toggle('no-ar', !s.pano);
@@ -106,6 +107,7 @@ export function createPopup(app, world, pins) {
       tail.style.left = '';
     }
     el.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`;
+    box[0] = x; box[1] = y; box[2] = x + w; box[3] = y + ph;
   }
 
   function open(s) {
@@ -142,5 +144,7 @@ export function createPopup(app, world, pins) {
     get site() { return cur; },
     // 今の視点では、縮めずに出せる場所がない
     get cramped() { return cramped; },
+    // 出ている吹き出しの四角（出ていない・ピンが画面の外のときは null）
+    get rect() { return cur && !el.classList.contains('is-away') ? box : null; },
   };
 }

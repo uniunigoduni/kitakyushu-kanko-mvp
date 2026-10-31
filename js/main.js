@@ -12,6 +12,7 @@ import { createPopup } from './ui/popup.js';
 import { createAR } from './ar.js';
 import { createPay } from './pay.js';
 import { createFlavor } from './ui/flavor.js';
+import { createZoom } from './ui/zoom.js';
 
 // 現代の今年（小数の誤差で前の年に見えないよう、年の途中に置く）
 const T_NOW = yearToT(NOW_YEAR + 0.5);
@@ -188,6 +189,7 @@ function start(world, sites, arData) {
   const { major, detail } = timelineData(timelineRaw, sites);
   const pins = createPins(app, world, sites);
   const popup = createPopup(app, world, pins);
+  createZoom(world, popup);
   const ar = createAR(app, world, arData);
   app.openAR = (s, img) => ar.open(s, img);
   const pay = createPay(app, world);

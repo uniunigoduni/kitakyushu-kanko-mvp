@@ -548,6 +548,18 @@ export async function createWorld(container, geo) {
     controls.normalizeRotations();
     return controls.setLookAt(...homePosition(), home.target.x, home.target.y, home.target.z, smooth);
   }
+  // ボタンで寄る・引く（k < 1 で寄る）。続けて押したときは、動いている途中でも行き先の距離から数える
+  const _sph = new THREE.Spherical();
+  function zoom(k, smooth = true) {
+    atHome = false;
+    wake();
+    return controls.dollyTo(controls.getSpherical(_sph).radius * k, smooth);
+  }
+  // その向きにまだ動けるか（行き先が近さ・遠さの端に着いていたら false）
+  function canZoom(k) {
+    const r = controls.getSpherical(_sph).radius;
+    return k < 1 ? r > controls.minDistance + 0.5 : r < controls.maxDistance - 0.5;
+  }
   function at(lon, lat, lift = 0) {
     const [x, z] = geo.toXZ(lon, lat);
     return new THREE.Vector3(x, Math.max(0, geo.heightAt(x, z)) + lift, z);
@@ -571,7 +583,7 @@ export async function createWorld(container, geo) {
     get year() { return year; }, get look() { return look; }, get size() { return { W, H }; },
     get home() { return home; }, get quality() { return quality; }, get safe() { return { ...safe }; },
     setYear, setLook, setNight, setFx, setSafeArea, focusShadow,
-    project, toGround, at, view, goHome, wake, pause,
+    project, toGround, at, view, goHome, zoom, canZoom, wake, pause,
     onFrame(f) { hooks.add(f); return () => hooks.delete(f); },
     distance: () => controls.distance,
     // f() は地名を消したい画面上の四角 [x0, y0, x1, y1] の配列を返す
