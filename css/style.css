@@ -1,5 +1,5 @@
 /* 門司ヒストリーマップ。黒地に淡い文字（Black Soft）。角丸は 0 か 12 だけ。
-   色を持つのは「地図」「時代の差し色（--era-accent）」「赤い矢印」の3つだけ。面はすべて同じ黒で、1px の線で区切る。
+   色を持つのは「地図」「時代の差し色（--era-accent）」「赤い矢印」「一押しの史跡の金（--pick）」の4つだけ。面はすべて同じ黒で、1px の線で区切る。
    決済（.pay）だけは、決済ページへ移った感じを出すため、白地の別の決まりで作る。 */
 @font-face { font-family: 'Moji Brush'; src: url('../assets/fonts/yuji-syuku.woff2') format('woff2'); font-display: block; }
 @font-face { font-family: 'Moji Mincho'; src: url('../assets/fonts/shippori-mincho-600.woff2') format('woff2'); font-weight: 600; font-display: block; }
@@ -15,6 +15,8 @@
   --overlay: rgba(255, 255, 255, .08);
   --scrim: rgba(0, 0, 0, .48);
   --red: #e0402f;
+  --pick: #f2b33d;
+  --pick-soft: rgba(242, 179, 61, .14);
   --radius: 12px;
   --shadow-float: 0 18px 60px rgba(0, 0, 0, .28);
   --t-hover: 120ms ease;
@@ -366,6 +368,13 @@ button.dt-item { width: 100%; text-align: left; }
 .pin.lv3 .pin-head { border: 2px solid var(--era-accent); box-shadow: 0 0 0 2px #0c0c0c, 0 0 0 3px rgba(242, 242, 242, .9), 0 2px 8px rgba(0, 0, 0, .6); }
 .pin.lv3 .pin-head::after { width: 40%; height: 40%; background: var(--era-accent); }
 .pin.lv3 .pin-name { font-size: 13.5px; font-weight: 700; }
+/* 一押しの史跡：出す順は最大レベルのまま、大きさは中のピン。金の縁と点で見分ける。
+   現代の地図にも「いまの姿」として出し（.is-today）、名前のあとに、さかのぼる先の年を添える */
+.pin.is-pick { --head: 15px; --stem: 12px; }
+.pin.is-pick .pin-head { border: 2px solid var(--pick); box-shadow: 0 0 0 1.5px #0c0c0c, 0 0 10px rgba(242, 179, 61, .45), 0 1px 4px rgba(0, 0, 0, .6); }
+.pin.is-pick .pin-head::after { width: 42%; height: 42%; background: var(--pick); }
+.pin.is-pick .pin-name { font-size: 13px; font-weight: 700; }
+.pin-year { margin-left: 6px; font: 500 10.5px/1 var(--mono); font-feature-settings: 'tnum'; letter-spacing: .02em; color: var(--pick); }
 /* 特別演出のある史跡：ひと回り大きく、中はひし形、外へゆっくり広がる輪 */
 .pin.is-special { --head: 26px; --stem: 20px; }
 .pin.is-special .pin-head { border: 2px solid var(--era-accent); box-shadow: 0 0 0 2px #0c0c0c, 0 0 0 3.5px rgba(242, 242, 242, .95), 0 2px 10px rgba(0, 0, 0, .65); }
@@ -373,6 +382,10 @@ button.dt-item { width: 100%; text-align: left; }
 .pin.is-special .pin-head::before { content: ''; position: absolute; inset: -7px; border-radius: 50%; border: 1.5px solid var(--era-accent); opacity: 0; animation: pin-halo 2.6s ease-out infinite; }
 .pin.is-special .pin-name { font-size: 14px; font-weight: 700; }
 @keyframes pin-halo { 0% { transform: scale(.7); opacity: .9; } 70%, 100% { transform: scale(1.5); opacity: 0; } }
+/* 特別演出があって一押しでもある史跡（門司港駅）は、その時代では大きいまま、色だけ金にする */
+.pin.is-special.is-pick .pin-head { border-color: var(--pick); }
+.pin.is-special.is-pick .pin-head::after { background: var(--pick); }
+.pin.is-special.is-pick .pin-head::before { border-color: var(--pick); }
 /* 写真の枠のピン（巌流島）：どの時代にも出し、枠の中はいまの年の場面 */
 .pin.is-frame { --head: 40px; --head-w: 62px; --stem: 34px; }
 .pin.is-frame .pin-head { border-radius: 3px; border: 2px solid #f4f1ea; background: #1a1a1a; overflow: hidden; box-shadow: 0 0 0 1px rgba(0, 0, 0, .55), 0 4px 14px rgba(0, 0, 0, .6); }
@@ -482,6 +495,42 @@ button.dt-item { width: 100%; text-align: left; }
 .btn-primary.is-paid { background: transparent; color: var(--strong); border: 1px solid var(--muted); }
 .btn-primary.is-paid:hover { background: var(--overlay); }
 .popup-guide-note { margin: 6px 0 0; text-align: center; font-size: 11.5px; color: var(--muted); }
+/* 一押しの史跡の「いま」。右に現代へ戻るボタン */
+.popup-now { display: flex; align-items: center; gap: 10px; margin: 12px 0 0; padding: 9px 9px 9px 12px; border: 1px solid var(--line); border-radius: var(--radius); }
+.popup-now-text { flex: 1 1 auto; min-width: 0; margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; font-size: 13px; line-height: 1.6; }
+.popup-now-tag { font-size: 11.5px; font-weight: 700; letter-spacing: .1em; color: var(--pick); }
+.popup-now-name { color: var(--strong); font-weight: 700; word-break: auto-phrase; }
+.popup-now-note { flex-basis: 100%; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.popup-now-back {
+  flex: 0 0 auto; height: 34px; padding: 0 12px;
+  border: 1px solid var(--pick); border-radius: var(--radius);
+  color: var(--pick); font-size: 13px; font-weight: 700; letter-spacing: .04em; white-space: nowrap;
+  transition: background-color var(--t-hover);
+}
+.popup-now-back:hover { background: var(--pick-soft); }
+
+/* ---------- 現代と当時を行き来するときの札（地図の窓の上の真ん中） ----------
+   左に数えていく年、右に「いま」と「当時」の名前。押せないので、下の地図の操作をじゃましない */
+.travel {
+  position: absolute; left: 50%; top: 12px; z-index: 3;
+  display: flex; align-items: center; gap: 14px;
+  max-width: calc(100% - 24px);
+  padding: 10px 16px 10px 14px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow-float);
+  pointer-events: none;
+  opacity: 0; transform: translate(-50%, -6px);
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+.travel.is-open { opacity: 1; transform: translate(-50%, 0); }
+.travel-when { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; min-width: 76px; padding-right: 14px; border-right: 1px solid var(--line); }
+.travel-year { margin: 0; font: 500 28px/1.1 var(--mono); font-feature-settings: 'tnum'; color: var(--pick); white-space: nowrap; }
+.travel.is-done .travel-year { font-size: 22px; line-height: 1.4; }
+.travel-lead { margin: 2px 0 0; font-size: 11px; letter-spacing: .08em; color: var(--muted); white-space: nowrap; }
+.travel-rows { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: auto 1fr; align-items: baseline; gap: 2px 10px; margin: 0; font-size: 13.5px; line-height: 1.5; }
+.travel-rows dt { font-size: 11.5px; font-weight: 700; letter-spacing: .1em; color: var(--muted); }
+.travel-rows dt:last-of-type { color: var(--pick); } /* 行き先の方 */
+.travel-rows dd { margin: 0; color: var(--strong); font-weight: 700; word-break: auto-phrase; }
 
 /* ---------- 時代の絵（地図の外。タイトルの右の空きに出す） ----------
    絵は高さ 76px で描き、--fl-s 倍にして帯にはめる。下の端が地図の窓の上の縁（地面・水平線）。

@@ -1,0 +1,2805 @@
+{
+ "note": "MVP 用のダミーの小さいピン（実在の史跡ではない）。tools/build_dummy_pins.py で作る",
+ "sites": [
+  {
+   "id": "dummy_jomon_01",
+   "name": "貝塚（ダミー）",
+   "year": -7450,
+   "yearLabel": "縄文時代",
+   "eras": [
+    "jomon"
+   ],
+   "lat": 33.92794,
+   "lon": 131.00377,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_jomon_02",
+   "name": "竪穴住居の跡（ダミー）",
+   "year": -7450,
+   "yearLabel": "縄文時代",
+   "eras": [
+    "jomon"
+   ],
+   "lat": 33.8976,
+   "lon": 130.93169,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_jomon_03",
+   "name": "土器のかけら（ダミー）",
+   "year": -7450,
+   "yearLabel": "縄文時代",
+   "eras": [
+    "jomon"
+   ],
+   "lat": 33.9442,
+   "lon": 130.9661,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_jomon_04",
+   "name": "石斧の出土地（ダミー）",
+   "year": -7450,
+   "yearLabel": "縄文時代",
+   "eras": [
+    "jomon"
+   ],
+   "lat": 33.88893,
+   "lon": 130.98299,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_jomon_05",
+   "name": "漁をした浜（ダミー）",
+   "year": -7450,
+   "yearLabel": "縄文時代",
+   "eras": [
+    "jomon"
+   ],
+   "lat": 33.86889,
+   "lon": 130.9726,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_jomon_06",
+   "name": "どんぐりの貯蔵穴（ダミー）",
+   "year": -7450,
+   "yearLabel": "縄文時代",
+   "eras": [
+    "jomon"
+   ],
+   "lat": 33.89002,
+   "lon": 130.92909,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_jomon_07",
+   "name": "丸木舟の浜（ダミー）",
+   "year": -7450,
+   "yearLabel": "縄文時代",
+   "eras": [
+    "jomon"
+   ],
+   "lat": 33.91711,
+   "lon": 131.01286,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_jomon_08",
+   "name": "黒曜石の出土地（ダミー）",
+   "year": -7450,
+   "yearLabel": "縄文時代",
+   "eras": [
+    "jomon"
+   ],
+   "lat": 33.89056,
+   "lon": 130.97584,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_jomon_09",
+   "name": "狩り場（ダミー）",
+   "year": -7450,
+   "yearLabel": "縄文時代",
+   "eras": [
+    "jomon"
+   ],
+   "lat": 33.88026,
+   "lon": 130.94532,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_jomon_10",
+   "name": "集落の跡（ダミー）",
+   "year": -7450,
+   "yearLabel": "縄文時代",
+   "eras": [
+    "jomon"
+   ],
+   "lat": 33.88568,
+   "lon": 130.97195,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_yayoi_01",
+   "name": "水田の跡（ダミー）",
+   "year": -325,
+   "yearLabel": "弥生時代",
+   "eras": [
+    "yayoi"
+   ],
+   "lat": 33.86401,
+   "lon": 130.9713,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_yayoi_02",
+   "name": "環濠集落（ダミー）",
+   "year": -325,
+   "yearLabel": "弥生時代",
+   "eras": [
+    "yayoi"
+   ],
+   "lat": 33.89652,
+   "lon": 130.98039,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_yayoi_03",
+   "name": "高床倉庫の跡（ダミー）",
+   "year": -325,
+   "yearLabel": "弥生時代",
+   "eras": [
+    "yayoi"
+   ],
+   "lat": 33.86401,
+   "lon": 130.95701,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_yayoi_04",
+   "name": "甕棺墓（ダミー）",
+   "year": -325,
+   "yearLabel": "弥生時代",
+   "eras": [
+    "yayoi"
+   ],
+   "lat": 33.90952,
+   "lon": 130.94338,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_yayoi_05",
+   "name": "銅剣の出土地（ダミー）",
+   "year": -325,
+   "yearLabel": "弥生時代",
+   "eras": [
+    "yayoi"
+   ],
+   "lat": 33.90735,
+   "lon": 130.97325,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_yayoi_06",
+   "name": "漁村（ダミー）",
+   "year": -325,
+   "yearLabel": "弥生時代",
+   "eras": [
+    "yayoi"
+   ],
+   "lat": 33.92361,
+   "lon": 130.99987,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_yayoi_07",
+   "name": "製塩土器の浜（ダミー）",
+   "year": -325,
+   "yearLabel": "弥生時代",
+   "eras": [
+    "yayoi"
+   ],
+   "lat": 33.89327,
+   "lon": 130.9187,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_yayoi_08",
+   "name": "石包丁の出土地（ダミー）",
+   "year": -325,
+   "yearLabel": "弥生時代",
+   "eras": [
+    "yayoi"
+   ],
+   "lat": 33.90464,
+   "lon": 130.93948,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_yayoi_09",
+   "name": "高地性集落（ダミー）",
+   "year": -325,
+   "yearLabel": "弥生時代",
+   "eras": [
+    "yayoi"
+   ],
+   "lat": 33.87105,
+   "lon": 130.95247,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_yayoi_10",
+   "name": "木の農具の出土地（ダミー）",
+   "year": -325,
+   "yearLabel": "弥生時代",
+   "eras": [
+    "yayoi"
+   ],
+   "lat": 33.88839,
+   "lon": 130.98039,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_kofun_01",
+   "name": "円墳（ダミー）",
+   "year": 421,
+   "yearLabel": "古墳時代",
+   "eras": [
+    "kofun"
+   ],
+   "lat": 33.88243,
+   "lon": 130.92,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_kofun_02",
+   "name": "横穴墓（ダミー）",
+   "year": 421,
+   "yearLabel": "古墳時代",
+   "eras": [
+    "kofun"
+   ],
+   "lat": 33.92577,
+   "lon": 130.96545,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_kofun_03",
+   "name": "箱式石棺（ダミー）",
+   "year": 421,
+   "yearLabel": "古墳時代",
+   "eras": [
+    "kofun"
+   ],
+   "lat": 33.91711,
+   "lon": 130.99403,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_kofun_04",
+   "name": "豪族の館（ダミー）",
+   "year": 421,
+   "yearLabel": "古墳時代",
+   "eras": [
+    "kofun"
+   ],
+   "lat": 33.86293,
+   "lon": 130.97,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_kofun_05",
+   "name": "塩づくりの浜（ダミー）",
+   "year": 421,
+   "yearLabel": "古墳時代",
+   "eras": [
+    "kofun"
+   ],
+   "lat": 33.95503,
+   "lon": 130.98948,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_kofun_06",
+   "name": "須恵器の窯（ダミー）",
+   "year": 421,
+   "yearLabel": "古墳時代",
+   "eras": [
+    "kofun"
+   ],
+   "lat": 33.9404,
+   "lon": 130.99922,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_kofun_07",
+   "name": "海の祭り場（ダミー）",
+   "year": 421,
+   "yearLabel": "古墳時代",
+   "eras": [
+    "kofun"
+   ],
+   "lat": 33.95611,
+   "lon": 130.97649,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_kofun_08",
+   "name": "集落の跡（ダミー）",
+   "year": 421,
+   "yearLabel": "古墳時代",
+   "eras": [
+    "kofun"
+   ],
+   "lat": 33.86618,
+   "lon": 130.97325,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_kofun_09",
+   "name": "古墳群（ダミー）",
+   "year": 421,
+   "yearLabel": "古墳時代",
+   "eras": [
+    "kofun"
+   ],
+   "lat": 33.91602,
+   "lon": 130.95831,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_kofun_10",
+   "name": "鉄の工房（ダミー）",
+   "year": 421,
+   "yearLabel": "古墳時代",
+   "eras": [
+    "kofun"
+   ],
+   "lat": 33.86726,
+   "lon": 130.95766,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_asuka_01",
+   "name": "寺の礎石（ダミー）",
+   "year": 651,
+   "yearLabel": "飛鳥時代",
+   "eras": [
+    "asuka"
+   ],
+   "lat": 33.88785,
+   "lon": 130.97844,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_asuka_02",
+   "name": "のろし台（ダミー）",
+   "year": 651,
+   "yearLabel": "飛鳥時代",
+   "eras": [
+    "asuka"
+   ],
+   "lat": 33.9442,
+   "lon": 130.98818,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_asuka_03",
+   "name": "瓦の窯（ダミー）",
+   "year": 651,
+   "yearLabel": "飛鳥時代",
+   "eras": [
+    "asuka"
+   ],
+   "lat": 33.91277,
+   "lon": 130.94857,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_asuka_04",
+   "name": "港の集落（ダミー）",
+   "year": 651,
+   "yearLabel": "飛鳥時代",
+   "eras": [
+    "asuka"
+   ],
+   "lat": 33.94311,
+   "lon": 130.96026,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_asuka_05",
+   "name": "屯倉（ダミー）",
+   "year": 651,
+   "yearLabel": "飛鳥時代",
+   "eras": [
+    "asuka"
+   ],
+   "lat": 33.89706,
+   "lon": 130.93623,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_asuka_06",
+   "name": "渡し場（ダミー）",
+   "year": 651,
+   "yearLabel": "飛鳥時代",
+   "eras": [
+    "asuka"
+   ],
+   "lat": 33.92794,
+   "lon": 131.00312,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_asuka_07",
+   "name": "古道（ダミー）",
+   "year": 651,
+   "yearLabel": "飛鳥時代",
+   "eras": [
+    "asuka"
+   ],
+   "lat": 33.91169,
+   "lon": 130.94078,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_asuka_08",
+   "name": "防人の見張り（ダミー）",
+   "year": 651,
+   "yearLabel": "飛鳥時代",
+   "eras": [
+    "asuka"
+   ],
+   "lat": 33.90248,
+   "lon": 130.9661,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_asuka_09",
+   "name": "塩焼きの浜（ダミー）",
+   "year": 651,
+   "yearLabel": "飛鳥時代",
+   "eras": [
+    "asuka"
+   ],
+   "lat": 33.96262,
+   "lon": 131.00117,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_asuka_10",
+   "name": "村の社（ダミー）",
+   "year": 651,
+   "yearLabel": "飛鳥時代",
+   "eras": [
+    "asuka"
+   ],
+   "lat": 33.88839,
+   "lon": 130.92844,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_nara_01",
+   "name": "駅家（ダミー）",
+   "year": 752,
+   "yearLabel": "奈良時代",
+   "eras": [
+    "nara"
+   ],
+   "lat": 33.8678,
+   "lon": 130.97,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_nara_02",
+   "name": "官道（ダミー）",
+   "year": 752,
+   "yearLabel": "奈良時代",
+   "eras": [
+    "nara"
+   ],
+   "lat": 33.92794,
+   "lon": 130.99208,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_nara_03",
+   "name": "渡し場（ダミー）",
+   "year": 752,
+   "yearLabel": "奈良時代",
+   "eras": [
+    "nara"
+   ],
+   "lat": 33.92415,
+   "lon": 130.99987,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_nara_04",
+   "name": "塩焼きの浜（ダミー）",
+   "year": 752,
+   "yearLabel": "奈良時代",
+   "eras": [
+    "nara"
+   ],
+   "lat": 33.91169,
+   "lon": 130.93883,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_nara_05",
+   "name": "郷の集落（ダミー）",
+   "year": 752,
+   "yearLabel": "奈良時代",
+   "eras": [
+    "nara"
+   ],
+   "lat": 33.89056,
+   "lon": 130.97584,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_nara_06",
+   "name": "牧（ダミー）",
+   "year": 752,
+   "yearLabel": "奈良時代",
+   "eras": [
+    "nara"
+   ],
+   "lat": 33.87376,
+   "lon": 130.94078,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_nara_07",
+   "name": "寺の跡（ダミー）",
+   "year": 752,
+   "yearLabel": "奈良時代",
+   "eras": [
+    "nara"
+   ],
+   "lat": 33.91873,
+   "lon": 130.99987,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_nara_08",
+   "name": "瓦の出土地（ダミー）",
+   "year": 752,
+   "yearLabel": "奈良時代",
+   "eras": [
+    "nara"
+   ],
+   "lat": 33.95449,
+   "lon": 130.97779,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_nara_09",
+   "name": "船だまり（ダミー）",
+   "year": 752,
+   "yearLabel": "奈良時代",
+   "eras": [
+    "nara"
+   ],
+   "lat": 33.90735,
+   "lon": 130.93688,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_nara_10",
+   "name": "村の社（ダミー）",
+   "year": 752,
+   "yearLabel": "奈良時代",
+   "eras": [
+    "nara"
+   ],
+   "lat": 33.92848,
+   "lon": 131.00506,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_heian_01",
+   "name": "荘園（ダミー）",
+   "year": 990,
+   "yearLabel": "平安時代",
+   "eras": [
+    "heian"
+   ],
+   "lat": 33.90627,
+   "lon": 130.93948,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_heian_02",
+   "name": "村の社（ダミー）",
+   "year": 990,
+   "yearLabel": "平安時代",
+   "eras": [
+    "heian"
+   ],
+   "lat": 33.90248,
+   "lon": 130.94208,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_heian_03",
+   "name": "山寺（ダミー）",
+   "year": 990,
+   "yearLabel": "平安時代",
+   "eras": [
+    "heian"
+   ],
+   "lat": 33.95395,
+   "lon": 130.99468,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_heian_04",
+   "name": "船着き場（ダミー）",
+   "year": 990,
+   "yearLabel": "平安時代",
+   "eras": [
+    "heian"
+   ],
+   "lat": 33.96207,
+   "lon": 130.99727,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_heian_05",
+   "name": "見張り台（ダミー）",
+   "year": 990,
+   "yearLabel": "平安時代",
+   "eras": [
+    "heian"
+   ],
+   "lat": 33.87593,
+   "lon": 130.96221,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_heian_06",
+   "name": "館の跡（ダミー）",
+   "year": 990,
+   "yearLabel": "平安時代",
+   "eras": [
+    "heian"
+   ],
+   "lat": 33.91819,
+   "lon": 131.00442,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_heian_07",
+   "name": "塩浜（ダミー）",
+   "year": 990,
+   "yearLabel": "平安時代",
+   "eras": [
+    "heian"
+   ],
+   "lat": 33.91006,
+   "lon": 130.93753,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_heian_08",
+   "name": "漁村（ダミー）",
+   "year": 990,
+   "yearLabel": "平安時代",
+   "eras": [
+    "heian"
+   ],
+   "lat": 33.93661,
+   "lon": 131.00506,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_heian_09",
+   "name": "経塚（ダミー）",
+   "year": 990,
+   "yearLabel": "平安時代",
+   "eras": [
+    "heian"
+   ],
+   "lat": 33.93228,
+   "lon": 130.98429,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_heian_10",
+   "name": "古道（ダミー）",
+   "year": 990,
+   "yearLabel": "平安時代",
+   "eras": [
+    "heian"
+   ],
+   "lat": 33.96045,
+   "lon": 130.96416,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_kamakura_01",
+   "name": "地頭の館（ダミー）",
+   "year": 1259,
+   "yearLabel": "鎌倉時代",
+   "eras": [
+    "kamakura"
+   ],
+   "lat": 33.86238,
+   "lon": 130.98039,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_kamakura_02",
+   "name": "禅寺（ダミー）",
+   "year": 1259,
+   "yearLabel": "鎌倉時代",
+   "eras": [
+    "kamakura"
+   ],
+   "lat": 33.94853,
+   "lon": 131.00961,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_kamakura_03",
+   "name": "村の社（ダミー）",
+   "year": 1259,
+   "yearLabel": "鎌倉時代",
+   "eras": [
+    "kamakura"
+   ],
+   "lat": 33.90898,
+   "lon": 130.95117,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_kamakura_04",
+   "name": "船着き場（ダミー）",
+   "year": 1259,
+   "yearLabel": "鎌倉時代",
+   "eras": [
+    "kamakura"
+   ],
+   "lat": 33.89706,
+   "lon": 130.98169,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_kamakura_05",
+   "name": "砦（ダミー）",
+   "year": 1259,
+   "yearLabel": "鎌倉時代",
+   "eras": [
+    "kamakura"
+   ],
+   "lat": 33.94094,
+   "lon": 130.97974,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_kamakura_06",
+   "name": "市（ダミー）",
+   "year": 1259,
+   "yearLabel": "鎌倉時代",
+   "eras": [
+    "kamakura"
+   ],
+   "lat": 33.95503,
+   "lon": 130.96675,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_kamakura_07",
+   "name": "漁村（ダミー）",
+   "year": 1259,
+   "yearLabel": "鎌倉時代",
+   "eras": [
+    "kamakura"
+   ],
+   "lat": 33.89868,
+   "lon": 130.92844,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_kamakura_08",
+   "name": "塩浜（ダミー）",
+   "year": 1259,
+   "yearLabel": "鎌倉時代",
+   "eras": [
+    "kamakura"
+   ],
+   "lat": 33.9572,
+   "lon": 130.98234,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_kamakura_09",
+   "name": "板碑（ダミー）",
+   "year": 1259,
+   "yearLabel": "鎌倉時代",
+   "eras": [
+    "kamakura"
+   ],
+   "lat": 33.85859,
+   "lon": 130.96545,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_kamakura_10",
+   "name": "渡し場（ダミー）",
+   "year": 1259,
+   "yearLabel": "鎌倉時代",
+   "eras": [
+    "kamakura"
+   ],
+   "lat": 33.92523,
+   "lon": 130.99922,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_muromachi_01",
+   "name": "山城（ダミー）",
+   "year": 1453,
+   "yearLabel": "室町・戦国時代",
+   "eras": [
+    "muromachi"
+   ],
+   "lat": 33.88676,
+   "lon": 130.93558,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_muromachi_02",
+   "name": "砦（ダミー）",
+   "year": 1453,
+   "yearLabel": "室町・戦国時代",
+   "eras": [
+    "muromachi"
+   ],
+   "lat": 33.94149,
+   "lon": 130.98104,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_muromachi_03",
+   "name": "寺（ダミー）",
+   "year": 1453,
+   "yearLabel": "室町・戦国時代",
+   "eras": [
+    "muromachi"
+   ],
+   "lat": 33.92469,
+   "lon": 130.94532,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_muromachi_04",
+   "name": "村の社（ダミー）",
+   "year": 1453,
+   "yearLabel": "室町・戦国時代",
+   "eras": [
+    "muromachi"
+   ],
+   "lat": 33.90573,
+   "lon": 130.94727,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_muromachi_05",
+   "name": "水軍の船だまり（ダミー）",
+   "year": 1453,
+   "yearLabel": "室町・戦国時代",
+   "eras": [
+    "muromachi"
+   ],
+   "lat": 33.95557,
+   "lon": 130.99013,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_muromachi_06",
+   "name": "市（ダミー）",
+   "year": 1453,
+   "yearLabel": "室町・戦国時代",
+   "eras": [
+    "muromachi"
+   ],
+   "lat": 33.9507,
+   "lon": 130.97,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_muromachi_07",
+   "name": "館の跡（ダミー）",
+   "year": 1453,
+   "yearLabel": "室町・戦国時代",
+   "eras": [
+    "muromachi"
+   ],
+   "lat": 33.95015,
+   "lon": 130.97649,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_muromachi_08",
+   "name": "のろし台（ダミー）",
+   "year": 1453,
+   "yearLabel": "室町・戦国時代",
+   "eras": [
+    "muromachi"
+   ],
+   "lat": 33.9469,
+   "lon": 131.00117,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_muromachi_09",
+   "name": "漁村（ダミー）",
+   "year": 1453,
+   "yearLabel": "室町・戦国時代",
+   "eras": [
+    "muromachi"
+   ],
+   "lat": 33.95666,
+   "lon": 130.96481,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_muromachi_10",
+   "name": "宝篋印塔（ダミー）",
+   "year": 1453,
+   "yearLabel": "室町・戦国時代",
+   "eras": [
+    "muromachi"
+   ],
+   "lat": 33.90844,
+   "lon": 130.93883,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_azuchi_01",
+   "name": "砦（ダミー）",
+   "year": 1588,
+   "yearLabel": "安土桃山時代",
+   "eras": [
+    "azuchi"
+   ],
+   "lat": 33.89977,
+   "lon": 130.96156,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_azuchi_02",
+   "name": "陣の跡（ダミー）",
+   "year": 1588,
+   "yearLabel": "安土桃山時代",
+   "eras": [
+    "azuchi"
+   ],
+   "lat": 33.95449,
+   "lon": 130.99792,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_azuchi_03",
+   "name": "寺（ダミー）",
+   "year": 1588,
+   "yearLabel": "安土桃山時代",
+   "eras": [
+    "azuchi"
+   ],
+   "lat": 33.88731,
+   "lon": 130.97909,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_azuchi_04",
+   "name": "村の社（ダミー）",
+   "year": 1588,
+   "yearLabel": "安土桃山時代",
+   "eras": [
+    "azuchi"
+   ],
+   "lat": 33.8548,
+   "lon": 130.97065,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_azuchi_05",
+   "name": "船着き場（ダミー）",
+   "year": 1588,
+   "yearLabel": "安土桃山時代",
+   "eras": [
+    "azuchi"
+   ],
+   "lat": 33.94257,
+   "lon": 131.02065,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_azuchi_06",
+   "name": "茶屋（ダミー）",
+   "year": 1588,
+   "yearLabel": "安土桃山時代",
+   "eras": [
+    "azuchi"
+   ],
+   "lat": 33.85317,
+   "lon": 130.98364,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_azuchi_07",
+   "name": "漁村（ダミー）",
+   "year": 1588,
+   "yearLabel": "安土桃山時代",
+   "eras": [
+    "azuchi"
+   ],
+   "lat": 33.95124,
+   "lon": 131.0174,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_azuchi_08",
+   "name": "街道（ダミー）",
+   "year": 1588,
+   "yearLabel": "安土桃山時代",
+   "eras": [
+    "azuchi"
+   ],
+   "lat": 33.95449,
+   "lon": 130.97779,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_azuchi_09",
+   "name": "石垣の跡（ダミー）",
+   "year": 1588,
+   "yearLabel": "安土桃山時代",
+   "eras": [
+    "azuchi"
+   ],
+   "lat": 33.94528,
+   "lon": 130.99338,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_azuchi_10",
+   "name": "塩浜（ダミー）",
+   "year": 1588,
+   "yearLabel": "安土桃山時代",
+   "eras": [
+    "azuchi"
+   ],
+   "lat": 33.96153,
+   "lon": 131.00247,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_edo_01",
+   "name": "茶屋（ダミー）",
+   "year": 1728,
+   "yearLabel": "江戸時代",
+   "eras": [
+    "edo"
+   ],
+   "lat": 33.9339,
+   "lon": 131.00442,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_edo_02",
+   "name": "船宿（ダミー）",
+   "year": 1728,
+   "yearLabel": "江戸時代",
+   "eras": [
+    "edo"
+   ],
+   "lat": 33.90573,
+   "lon": 130.93429,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_edo_03",
+   "name": "一里塚（ダミー）",
+   "year": 1728,
+   "yearLabel": "江戸時代",
+   "eras": [
+    "edo"
+   ],
+   "lat": 33.85046,
+   "lon": 130.9739,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_edo_04",
+   "name": "庄屋屋敷（ダミー）",
+   "year": 1728,
+   "yearLabel": "江戸時代",
+   "eras": [
+    "edo"
+   ],
+   "lat": 33.87105,
+   "lon": 130.96351,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_edo_05",
+   "name": "寺子屋（ダミー）",
+   "year": 1728,
+   "yearLabel": "江戸時代",
+   "eras": [
+    "edo"
+   ],
+   "lat": 33.85967,
+   "lon": 130.98299,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_edo_06",
+   "name": "塩田（ダミー）",
+   "year": 1728,
+   "yearLabel": "江戸時代",
+   "eras": [
+    "edo"
+   ],
+   "lat": 33.95124,
+   "lon": 130.96805,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_edo_07",
+   "name": "漁村（ダミー）",
+   "year": 1728,
+   "yearLabel": "江戸時代",
+   "eras": [
+    "edo"
+   ],
+   "lat": 33.9106,
+   "lon": 130.93753,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_edo_08",
+   "name": "地蔵（ダミー）",
+   "year": 1728,
+   "yearLabel": "江戸時代",
+   "eras": [
+    "edo"
+   ],
+   "lat": 33.95937,
+   "lon": 131.00052,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_edo_09",
+   "name": "石灯籠（ダミー）",
+   "year": 1728,
+   "yearLabel": "江戸時代",
+   "eras": [
+    "edo"
+   ],
+   "lat": 33.9041,
+   "lon": 130.94078,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_edo_10",
+   "name": "段々畑（ダミー）",
+   "year": 1728,
+   "yearLabel": "江戸時代",
+   "eras": [
+    "edo"
+   ],
+   "lat": 33.88731,
+   "lon": 130.93494,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_bakumatsu_01",
+   "name": "砲台（ダミー）",
+   "year": 1860,
+   "yearLabel": "幕末",
+   "eras": [
+    "bakumatsu"
+   ],
+   "lat": 33.95449,
+   "lon": 131.00571,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_bakumatsu_02",
+   "name": "陣屋（ダミー）",
+   "year": 1860,
+   "yearLabel": "幕末",
+   "eras": [
+    "bakumatsu"
+   ],
+   "lat": 33.95937,
+   "lon": 131.00377,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_bakumatsu_03",
+   "name": "見張り所（ダミー）",
+   "year": 1860,
+   "yearLabel": "幕末",
+   "eras": [
+    "bakumatsu"
+   ],
+   "lat": 33.9404,
+   "lon": 130.97909,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_bakumatsu_04",
+   "name": "船宿（ダミー）",
+   "year": 1860,
+   "yearLabel": "幕末",
+   "eras": [
+    "bakumatsu"
+   ],
+   "lat": 33.89923,
+   "lon": 130.92909,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_bakumatsu_05",
+   "name": "茶屋（ダミー）",
+   "year": 1860,
+   "yearLabel": "幕末",
+   "eras": [
+    "bakumatsu"
+   ],
+   "lat": 33.85859,
+   "lon": 130.9674,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_bakumatsu_06",
+   "name": "寺（ダミー）",
+   "year": 1860,
+   "yearLabel": "幕末",
+   "eras": [
+    "bakumatsu"
+   ],
+   "lat": 33.90573,
+   "lon": 130.93883,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_bakumatsu_07",
+   "name": "庄屋屋敷（ダミー）",
+   "year": 1860,
+   "yearLabel": "幕末",
+   "eras": [
+    "bakumatsu"
+   ],
+   "lat": 33.86889,
+   "lon": 130.96675,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_bakumatsu_08",
+   "name": "漁村（ダミー）",
+   "year": 1860,
+   "yearLabel": "幕末",
+   "eras": [
+    "bakumatsu"
+   ],
+   "lat": 33.90573,
+   "lon": 130.93104,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_bakumatsu_09",
+   "name": "台場（ダミー）",
+   "year": 1860,
+   "yearLabel": "幕末",
+   "eras": [
+    "bakumatsu"
+   ],
+   "lat": 33.95666,
+   "lon": 130.98364,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_bakumatsu_10",
+   "name": "村の社（ダミー）",
+   "year": 1860,
+   "yearLabel": "幕末",
+   "eras": [
+    "bakumatsu"
+   ],
+   "lat": 33.95341,
+   "lon": 130.99013,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_meiji_01",
+   "name": "倉庫（ダミー）",
+   "year": 1890,
+   "yearLabel": "明治時代",
+   "eras": [
+    "meiji"
+   ],
+   "lat": 33.92686,
+   "lon": 130.94403,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_meiji_02",
+   "name": "商社（ダミー）",
+   "year": 1890,
+   "yearLabel": "明治時代",
+   "eras": [
+    "meiji"
+   ],
+   "lat": 33.95937,
+   "lon": 131.00442,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_meiji_03",
+   "name": "旅館（ダミー）",
+   "year": 1890,
+   "yearLabel": "明治時代",
+   "eras": [
+    "meiji"
+   ],
+   "lat": 33.94094,
+   "lon": 130.95766,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_meiji_04",
+   "name": "銀行（ダミー）",
+   "year": 1890,
+   "yearLabel": "明治時代",
+   "eras": [
+    "meiji"
+   ],
+   "lat": 33.94149,
+   "lon": 130.97,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_meiji_05",
+   "name": "小学校（ダミー）",
+   "year": 1890,
+   "yearLabel": "明治時代",
+   "eras": [
+    "meiji"
+   ],
+   "lat": 33.93065,
+   "lon": 130.94662,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_meiji_06",
+   "name": "郵便局（ダミー）",
+   "year": 1890,
+   "yearLabel": "明治時代",
+   "eras": [
+    "meiji"
+   ],
+   "lat": 33.90952,
+   "lon": 130.94662,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_meiji_07",
+   "name": "桟橋（ダミー）",
+   "year": 1890,
+   "yearLabel": "明治時代",
+   "eras": [
+    "meiji"
+   ],
+   "lat": 33.91602,
+   "lon": 131.00831,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_meiji_08",
+   "name": "石炭置き場（ダミー）",
+   "year": 1890,
+   "yearLabel": "明治時代",
+   "eras": [
+    "meiji"
+   ],
+   "lat": 33.94745,
+   "lon": 131.01675,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_meiji_09",
+   "name": "警察署（ダミー）",
+   "year": 1890,
+   "yearLabel": "明治時代",
+   "eras": [
+    "meiji"
+   ],
+   "lat": 33.90735,
+   "lon": 130.93883,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_meiji_10",
+   "name": "製材所（ダミー）",
+   "year": 1890,
+   "yearLabel": "明治時代",
+   "eras": [
+    "meiji"
+   ],
+   "lat": 33.95503,
+   "lon": 130.99273,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_taisho_01",
+   "name": "商店（ダミー）",
+   "year": 1919,
+   "yearLabel": "大正時代",
+   "eras": [
+    "taisho"
+   ],
+   "lat": 33.90139,
+   "lon": 130.92909,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_taisho_02",
+   "name": "料亭（ダミー）",
+   "year": 1919,
+   "yearLabel": "大正時代",
+   "eras": [
+    "taisho"
+   ],
+   "lat": 33.89977,
+   "lon": 130.92455,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_taisho_03",
+   "name": "映画館（ダミー）",
+   "year": 1919,
+   "yearLabel": "大正時代",
+   "eras": [
+    "taisho"
+   ],
+   "lat": 33.95124,
+   "lon": 130.97325,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_taisho_04",
+   "name": "倉庫（ダミー）",
+   "year": 1919,
+   "yearLabel": "大正時代",
+   "eras": [
+    "taisho"
+   ],
+   "lat": 33.94745,
+   "lon": 131.01675,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_taisho_05",
+   "name": "銀行（ダミー）",
+   "year": 1919,
+   "yearLabel": "大正時代",
+   "eras": [
+    "taisho"
+   ],
+   "lat": 33.95449,
+   "lon": 130.96675,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_taisho_06",
+   "name": "旅館（ダミー）",
+   "year": 1919,
+   "yearLabel": "大正時代",
+   "eras": [
+    "taisho"
+   ],
+   "lat": 33.93173,
+   "lon": 130.94597,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_taisho_07",
+   "name": "小学校（ダミー）",
+   "year": 1919,
+   "yearLabel": "大正時代",
+   "eras": [
+    "taisho"
+   ],
+   "lat": 33.89868,
+   "lon": 130.93299,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_taisho_08",
+   "name": "工場（ダミー）",
+   "year": 1919,
+   "yearLabel": "大正時代",
+   "eras": [
+    "taisho"
+   ],
+   "lat": 33.92307,
+   "lon": 130.94143,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_taisho_09",
+   "name": "社宅（ダミー）",
+   "year": 1919,
+   "yearLabel": "大正時代",
+   "eras": [
+    "taisho"
+   ],
+   "lat": 33.90844,
+   "lon": 130.99078,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_taisho_10",
+   "name": "写真館（ダミー）",
+   "year": 1919,
+   "yearLabel": "大正時代",
+   "eras": [
+    "taisho"
+   ],
+   "lat": 33.90952,
+   "lon": 130.94078,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_showa_pre_01",
+   "name": "カフェー（ダミー）",
+   "year": 1932,
+   "yearLabel": "昭和初期",
+   "eras": [
+    "showa_pre"
+   ],
+   "lat": 33.89272,
+   "lon": 130.93039,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_showa_pre_02",
+   "name": "商店街（ダミー）",
+   "year": 1932,
+   "yearLabel": "昭和初期",
+   "eras": [
+    "showa_pre"
+   ],
+   "lat": 33.90085,
+   "lon": 130.93558,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_showa_pre_03",
+   "name": "劇場（ダミー）",
+   "year": 1932,
+   "yearLabel": "昭和初期",
+   "eras": [
+    "showa_pre"
+   ],
+   "lat": 33.95557,
+   "lon": 130.97974,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_showa_pre_04",
+   "name": "倉庫（ダミー）",
+   "year": 1932,
+   "yearLabel": "昭和初期",
+   "eras": [
+    "showa_pre"
+   ],
+   "lat": 33.85209,
+   "lon": 130.98558,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_showa_pre_05",
+   "name": "工場（ダミー）",
+   "year": 1932,
+   "yearLabel": "昭和初期",
+   "eras": [
+    "showa_pre"
+   ],
+   "lat": 33.94528,
+   "lon": 130.96156,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_showa_pre_06",
+   "name": "社宅（ダミー）",
+   "year": 1932,
+   "yearLabel": "昭和初期",
+   "eras": [
+    "showa_pre"
+   ],
+   "lat": 33.91277,
+   "lon": 130.94013,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_showa_pre_07",
+   "name": "女学校（ダミー）",
+   "year": 1932,
+   "yearLabel": "昭和初期",
+   "eras": [
+    "showa_pre"
+   ],
+   "lat": 33.90735,
+   "lon": 130.94468,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_showa_pre_08",
+   "name": "病院（ダミー）",
+   "year": 1932,
+   "yearLabel": "昭和初期",
+   "eras": [
+    "showa_pre"
+   ],
+   "lat": 33.91981,
+   "lon": 130.94403,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_showa_pre_09",
+   "name": "料亭（ダミー）",
+   "year": 1932,
+   "yearLabel": "昭和初期",
+   "eras": [
+    "showa_pre"
+   ],
+   "lat": 33.90735,
+   "lon": 130.93494,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_showa_pre_10",
+   "name": "市場（ダミー）",
+   "year": 1932,
+   "yearLabel": "昭和初期",
+   "eras": [
+    "showa_pre"
+   ],
+   "lat": 33.95557,
+   "lon": 130.99143,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_war_01",
+   "name": "防空壕（ダミー）",
+   "year": 1941,
+   "yearLabel": "戦時中",
+   "eras": [
+    "war"
+   ],
+   "lat": 33.87647,
+   "lon": 130.95442,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_war_02",
+   "name": "高射砲陣地（ダミー）",
+   "year": 1941,
+   "yearLabel": "戦時中",
+   "eras": [
+    "war"
+   ],
+   "lat": 33.84776,
+   "lon": 130.9726,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_war_03",
+   "name": "監視哨（ダミー）",
+   "year": 1941,
+   "yearLabel": "戦時中",
+   "eras": [
+    "war"
+   ],
+   "lat": 33.89598,
+   "lon": 130.96221,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_war_04",
+   "name": "軍需倉庫（ダミー）",
+   "year": 1941,
+   "yearLabel": "戦時中",
+   "eras": [
+    "war"
+   ],
+   "lat": 33.95666,
+   "lon": 130.98364,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_war_05",
+   "name": "軍需工場（ダミー）",
+   "year": 1941,
+   "yearLabel": "戦時中",
+   "eras": [
+    "war"
+   ],
+   "lat": 33.93932,
+   "lon": 130.95117,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_war_06",
+   "name": "配給所（ダミー）",
+   "year": 1941,
+   "yearLabel": "戦時中",
+   "eras": [
+    "war"
+   ],
+   "lat": 33.93444,
+   "lon": 130.94597,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_war_07",
+   "name": "国民学校（ダミー）",
+   "year": 1941,
+   "yearLabel": "戦時中",
+   "eras": [
+    "war"
+   ],
+   "lat": 33.95015,
+   "lon": 130.9661,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_war_08",
+   "name": "寺（ダミー）",
+   "year": 1941,
+   "yearLabel": "戦時中",
+   "eras": [
+    "war"
+   ],
+   "lat": 33.9041,
+   "lon": 130.93429,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_war_09",
+   "name": "神社（ダミー）",
+   "year": 1941,
+   "yearLabel": "戦時中",
+   "eras": [
+    "war"
+   ],
+   "lat": 33.90681,
+   "lon": 130.93948,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_war_10",
+   "name": "隣組の集会所（ダミー）",
+   "year": 1941,
+   "yearLabel": "戦時中",
+   "eras": [
+    "war"
+   ],
+   "lat": 33.9144,
+   "lon": 130.94532,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_postwar_01",
+   "name": "闇市（ダミー）",
+   "year": 1950,
+   "yearLabel": "戦後",
+   "eras": [
+    "postwar"
+   ],
+   "lat": 33.89652,
+   "lon": 130.93104,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_postwar_02",
+   "name": "バラック（ダミー）",
+   "year": 1950,
+   "yearLabel": "戦後",
+   "eras": [
+    "postwar"
+   ],
+   "lat": 33.89543,
+   "lon": 130.92649,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_postwar_03",
+   "name": "引揚者の宿（ダミー）",
+   "year": 1950,
+   "yearLabel": "戦後",
+   "eras": [
+    "postwar"
+   ],
+   "lat": 33.89272,
+   "lon": 130.93039,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_postwar_04",
+   "name": "新制中学校（ダミー）",
+   "year": 1950,
+   "yearLabel": "戦後",
+   "eras": [
+    "postwar"
+   ],
+   "lat": 33.90844,
+   "lon": 130.95442,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_postwar_05",
+   "name": "市場（ダミー）",
+   "year": 1950,
+   "yearLabel": "戦後",
+   "eras": [
+    "postwar"
+   ],
+   "lat": 33.89868,
+   "lon": 130.93688,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_postwar_06",
+   "name": "工場（ダミー）",
+   "year": 1950,
+   "yearLabel": "戦後",
+   "eras": [
+    "postwar"
+   ],
+   "lat": 33.94528,
+   "lon": 130.96416,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_postwar_07",
+   "name": "映画館（ダミー）",
+   "year": 1950,
+   "yearLabel": "戦後",
+   "eras": [
+    "postwar"
+   ],
+   "lat": 33.90789,
+   "lon": 130.94468,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_postwar_08",
+   "name": "銭湯（ダミー）",
+   "year": 1950,
+   "yearLabel": "戦後",
+   "eras": [
+    "postwar"
+   ],
+   "lat": 33.9507,
+   "lon": 130.97714,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_postwar_09",
+   "name": "社宅（ダミー）",
+   "year": 1950,
+   "yearLabel": "戦後",
+   "eras": [
+    "postwar"
+   ],
+   "lat": 33.95503,
+   "lon": 130.99208,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_postwar_10",
+   "name": "進駐軍の倉庫（ダミー）",
+   "year": 1950,
+   "yearLabel": "戦後",
+   "eras": [
+    "postwar"
+   ],
+   "lat": 33.90573,
+   "lon": 130.93104,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_growth_01",
+   "name": "団地（ダミー）",
+   "year": 1964,
+   "yearLabel": "高度経済成長期",
+   "eras": [
+    "growth"
+   ],
+   "lat": 33.91223,
+   "lon": 130.94662,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_growth_02",
+   "name": "工場（ダミー）",
+   "year": 1964,
+   "yearLabel": "高度経済成長期",
+   "eras": [
+    "growth"
+   ],
+   "lat": 33.8548,
+   "lon": 130.98948,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_growth_03",
+   "name": "商店街（ダミー）",
+   "year": 1964,
+   "yearLabel": "高度経済成長期",
+   "eras": [
+    "growth"
+   ],
+   "lat": 33.94799,
+   "lon": 130.97065,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_growth_04",
+   "name": "スーパー（ダミー）",
+   "year": 1964,
+   "yearLabel": "高度経済成長期",
+   "eras": [
+    "growth"
+   ],
+   "lat": 33.89543,
+   "lon": 130.9226,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_growth_05",
+   "name": "中学校（ダミー）",
+   "year": 1964,
+   "yearLabel": "高度経済成長期",
+   "eras": [
+    "growth"
+   ],
+   "lat": 33.90519,
+   "lon": 130.94468,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_growth_06",
+   "name": "公民館（ダミー）",
+   "year": 1964,
+   "yearLabel": "高度経済成長期",
+   "eras": [
+    "growth"
+   ],
+   "lat": 33.9144,
+   "lon": 130.93948,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_growth_07",
+   "name": "銭湯（ダミー）",
+   "year": 1964,
+   "yearLabel": "高度経済成長期",
+   "eras": [
+    "growth"
+   ],
+   "lat": 33.89164,
+   "lon": 130.92584,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_growth_08",
+   "name": "ボウリング場（ダミー）",
+   "year": 1964,
+   "yearLabel": "高度経済成長期",
+   "eras": [
+    "growth"
+   ],
+   "lat": 33.89868,
+   "lon": 130.92779,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_growth_09",
+   "name": "社宅（ダミー）",
+   "year": 1964,
+   "yearLabel": "高度経済成長期",
+   "eras": [
+    "growth"
+   ],
+   "lat": 33.89056,
+   "lon": 130.92065,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_growth_10",
+   "name": "港の倉庫（ダミー）",
+   "year": 1964,
+   "yearLabel": "高度経済成長期",
+   "eras": [
+    "growth"
+   ],
+   "lat": 33.9041,
+   "lon": 130.92909,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_showa_late_01",
+   "name": "団地（ダミー）",
+   "year": 1981,
+   "yearLabel": "昭和後期",
+   "eras": [
+    "showa_late"
+   ],
+   "lat": 33.9507,
+   "lon": 130.97584,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_showa_late_02",
+   "name": "ショッピングセンター（ダミー）",
+   "year": 1981,
+   "yearLabel": "昭和後期",
+   "eras": [
+    "showa_late"
+   ],
+   "lat": 33.89977,
+   "lon": 130.93818,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_showa_late_03",
+   "name": "物流倉庫（ダミー）",
+   "year": 1981,
+   "yearLabel": "昭和後期",
+   "eras": [
+    "showa_late"
+   ],
+   "lat": 33.95666,
+   "lon": 130.98623,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_showa_late_04",
+   "name": "公園（ダミー）",
+   "year": 1981,
+   "yearLabel": "昭和後期",
+   "eras": [
+    "showa_late"
+   ],
+   "lat": 33.85588,
+   "lon": 130.99208,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_showa_late_05",
+   "name": "高校（ダミー）",
+   "year": 1981,
+   "yearLabel": "昭和後期",
+   "eras": [
+    "showa_late"
+   ],
+   "lat": 33.91115,
+   "lon": 130.94013,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_showa_late_06",
+   "name": "病院（ダミー）",
+   "year": 1981,
+   "yearLabel": "昭和後期",
+   "eras": [
+    "showa_late"
+   ],
+   "lat": 33.84938,
+   "lon": 130.98169,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_showa_late_07",
+   "name": "工場（ダミー）",
+   "year": 1981,
+   "yearLabel": "昭和後期",
+   "eras": [
+    "showa_late"
+   ],
+   "lat": 33.95341,
+   "lon": 130.96675,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_showa_late_08",
+   "name": "フェリー乗り場（ダミー）",
+   "year": 1981,
+   "yearLabel": "昭和後期",
+   "eras": [
+    "showa_late"
+   ],
+   "lat": 33.92144,
+   "lon": 130.94013,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_showa_late_09",
+   "name": "運動公園（ダミー）",
+   "year": 1981,
+   "yearLabel": "昭和後期",
+   "eras": [
+    "showa_late"
+   ],
+   "lat": 33.9572,
+   "lon": 131.02065,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_showa_late_10",
+   "name": "図書館（ダミー）",
+   "year": 1981,
+   "yearLabel": "昭和後期",
+   "eras": [
+    "showa_late"
+   ],
+   "lat": 33.93661,
+   "lon": 130.95052,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_heisei_01",
+   "name": "コンビニ（ダミー）",
+   "year": 2004,
+   "yearLabel": "平成",
+   "eras": [
+    "heisei"
+   ],
+   "lat": 33.89381,
+   "lon": 130.92779,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_heisei_02",
+   "name": "公園（ダミー）",
+   "year": 2004,
+   "yearLabel": "平成",
+   "eras": [
+    "heisei"
+   ],
+   "lat": 33.9469,
+   "lon": 130.96935,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_heisei_03",
+   "name": "物流センター（ダミー）",
+   "year": 2004,
+   "yearLabel": "平成",
+   "eras": [
+    "heisei"
+   ],
+   "lat": 33.90031,
+   "lon": 130.92455,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_heisei_04",
+   "name": "マンション（ダミー）",
+   "year": 2004,
+   "yearLabel": "平成",
+   "eras": [
+    "heisei"
+   ],
+   "lat": 33.87051,
+   "lon": 130.9726,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_heisei_05",
+   "name": "小学校（ダミー）",
+   "year": 2004,
+   "yearLabel": "平成",
+   "eras": [
+    "heisei"
+   ],
+   "lat": 33.90952,
+   "lon": 130.93494,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_heisei_06",
+   "name": "病院（ダミー）",
+   "year": 2004,
+   "yearLabel": "平成",
+   "eras": [
+    "heisei"
+   ],
+   "lat": 33.90681,
+   "lon": 130.94078,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_heisei_07",
+   "name": "展望台（ダミー）",
+   "year": 2004,
+   "yearLabel": "平成",
+   "eras": [
+    "heisei"
+   ],
+   "lat": 33.93661,
+   "lon": 130.9661,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_heisei_08",
+   "name": "商業施設（ダミー）",
+   "year": 2004,
+   "yearLabel": "平成",
+   "eras": [
+    "heisei"
+   ],
+   "lat": 33.8613,
+   "lon": 130.97519,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_heisei_09",
+   "name": "駐車場（ダミー）",
+   "year": 2004,
+   "yearLabel": "平成",
+   "eras": [
+    "heisei"
+   ],
+   "lat": 33.96045,
+   "lon": 130.99857,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_heisei_10",
+   "name": "釣り公園（ダミー）",
+   "year": 2004,
+   "yearLabel": "平成",
+   "eras": [
+    "heisei"
+   ],
+   "lat": 33.93498,
+   "lon": 130.94532,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_now_01",
+   "name": "カフェ（ダミー）",
+   "year": 2023,
+   "yearLabel": "現代",
+   "eras": [
+    "now"
+   ],
+   "lat": 33.90302,
+   "lon": 130.93169,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_now_02",
+   "name": "ホテル（ダミー）",
+   "year": 2023,
+   "yearLabel": "現代",
+   "eras": [
+    "now"
+   ],
+   "lat": 33.94528,
+   "lon": 130.9674,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_now_03",
+   "name": "公園（ダミー）",
+   "year": 2023,
+   "yearLabel": "現代",
+   "eras": [
+    "now"
+   ],
+   "lat": 33.89272,
+   "lon": 130.9187,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_now_04",
+   "name": "展望所（ダミー）",
+   "year": 2023,
+   "yearLabel": "現代",
+   "eras": [
+    "now"
+   ],
+   "lat": 33.92686,
+   "lon": 130.95571,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_now_05",
+   "name": "商業施設（ダミー）",
+   "year": 2023,
+   "yearLabel": "現代",
+   "eras": [
+    "now"
+   ],
+   "lat": 33.86455,
+   "lon": 130.9726,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_now_06",
+   "name": "撮影スポット（ダミー）",
+   "year": 2023,
+   "yearLabel": "現代",
+   "eras": [
+    "now"
+   ],
+   "lat": 33.87485,
+   "lon": 130.99792,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_now_07",
+   "name": "観光案内所（ダミー）",
+   "year": 2023,
+   "yearLabel": "現代",
+   "eras": [
+    "now"
+   ],
+   "lat": 33.89868,
+   "lon": 130.92584,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_now_08",
+   "name": "ゲストハウス（ダミー）",
+   "year": 2023,
+   "yearLabel": "現代",
+   "eras": [
+    "now"
+   ],
+   "lat": 33.89381,
+   "lon": 130.92714,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_now_09",
+   "name": "レンタサイクル（ダミー）",
+   "year": 2023,
+   "yearLabel": "現代",
+   "eras": [
+    "now"
+   ],
+   "lat": 33.89923,
+   "lon": 130.93364,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  },
+  {
+   "id": "dummy_now_10",
+   "name": "海辺の遊歩道（ダミー）",
+   "year": 2023,
+   "yearLabel": "現代",
+   "eras": [
+    "now"
+   ],
+   "lat": 33.87105,
+   "lon": 130.98364,
+   "level": 1,
+   "dummy": true,
+   "summary": "MVP用のダミーのピンです。実在の史跡ではありません。地図に寄ると出てくる小さいピンの見本として置いています。"
+  }
+ ]
+}

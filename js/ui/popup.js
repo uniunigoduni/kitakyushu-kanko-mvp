@@ -1,7 +1,7 @@
 // 史跡の吹き出し。ピンを隠さない側に出し（ピンが画面の下の方なら上）、しっぽはピンを指したまま地図に付いていく。
 // 別のピンを選ぶと、前の吹き出しは消して新しい中身に入れ替える。
 import { clamp, h, isPaid, paidUntil } from '../util.js';
-import { geomOf } from './pins.js';
+import { pinLabel } from './pins.js';
 
 const M = 8;     // 地図の窓の縁からの余白
 const GAP = 14;  // ピンと吹き出しの間（しっぽの分）
@@ -32,6 +32,13 @@ export function createPopup(app, world, pins) {
       h('p', { class: 'popup-year', text: s.yearLabel }),
       h('h2', { class: 'popup-name', id: 'popup-name', text: s.name }),
       s.summary ? h('p', { class: 'popup-summary', text: s.summary }) : null,
+      // 一押しの史跡は、いまの姿と、現代の地図へ戻るボタン
+      s.pick ? h('div', { class: 'popup-now' },
+        h('p', { class: 'popup-now-text' },
+          h('span', { class: 'popup-now-tag', text: 'いま' }),
+          h('span', { class: 'popup-now-name', text: s.nowName ?? pinLabel(s.name) }),
+          s.nowNote ? h('span', { class: 'popup-now-note', text: s.nowNote }) : null),
+        h('button', { class: 'popup-now-back', type: 'button', onclick: () => app.backToNow(s), text: '現代へ戻る' })) : null,
       s.body?.length > 0 ? h('div', { class: 'popup-body' }, s.body.map((t) => h('p', { text: t }))) : null,
       s.disputed ? h('p', { class: 'popup-note', text: s.disputed }) : null,
       s.sources?.length > 0 ? h('ul', { class: 'popup-sources' }, s.sources.map((r) =>
@@ -71,7 +78,7 @@ export function createPopup(app, world, pins) {
     const { W, H } = world.size;
     if (P.x === last.x && P.y === last.y && W === last.W && H === last.H) return;
     Object.assign(last, { x: P.x, y: P.y, W, H });
-    const g = geomOf(cur);
+    const g = p.g; // 現代の地図に出した一押しの史跡は、中のピンの大きさ
     const rx = g.w / 2, ry = g.h / 2;
     const hx = P.x, hy = P.y - g.stem;
     const away = !P.visible || hx < 0 || hx > W || hy < 0 || P.y > H;

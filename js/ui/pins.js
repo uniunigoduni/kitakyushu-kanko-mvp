@@ -2,7 +2,9 @@
 // 大事なピンから順に置き、先に置いたピンと重なるピンは名前を隠すか、ピンごと隠す（HOI4 の都市のように、寄るほど増える）。
 // 時代ごとの注目の史跡には、赤ペンで描いたような矢印を一度だけ引く。
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { formatYear } from '../eras.js';
 import { h, svg } from '../util.js';
+import { shortYear } from './band.js';
 
 // ピンの頭の幅・高さと軸の高さ（css/style.css の .pin.lv* などと同じ値）。頭の中心は根元から軸の高さだけ上
 const GEOM = {
@@ -13,9 +15,15 @@ const GEOM = {
   frame: { w: 62, h: 40, stem: 34 },   // 写真の枠のピン（時代ごとの場面がある場所）
   dummy: { w: 8, h: 8, stem: 0 },      // MVP 用のダミー
 };
-export const geomOf = (s) => GEOM[s.scenes ? 'frame' : s.special ? 'special' : s.dummy ? 'dummy' : s.level];
+// 一押しの史跡（pick）は、出す順では最大レベルのまま、大きさは中のピンにして色で見分ける。
+// 現代の地図に出すとき（today）は、特別演出のある史跡も中のピンにそろえる
+export const geomOf = (s, today = false) => GEOM[s.scenes ? 'frame' : s.special && !today ? 'special' : s.dummy ? 'dummy' : s.pick ? 2 : s.level];
 // ピンに添える短い名前：「戦時中の門司港：出征の港と空襲」→「戦時中の門司港」
 export const pinLabel = (name) => name.split('：')[0].replace(/（[^）]*）/g, '');
+// 一押しの史跡は、その時代に加えて現代の地図にも「いまの姿」として出す
+export const isToday = (s, era) => !!s.pick && era?.id === 'now' && !s.eras.includes('now');
+// 現代の地図で名前に添える、さかのぼる先の年（「1934年」「1183年頃」）
+export const yearTag = (s) => shortYear(s.yearLabel ?? '').match(/^前?\d+年頃?/)?.[0] ?? `${formatYear(s.year)}年`;
 
 // 置く順（小さいほど先）：写真の枠 → 特別演出 → 最大レベル → 中 → 小 → ダミー。同じレベルは注目の史跡が先
 const tierOf = (s) => (s.scenes ? 0 : s.special ? 1 : s.dummy ? 8 : (3 - s.level) * 2 + (s.featured ? 2 : 3));
@@ -34,10 +42,9 @@ export function createPins(app, world, sites) {
   const pins = new Map();
   for (const s of sites) {
     const head = h('span', { class: 'pin-head' });
-    const hit = h('button', { class: 'pin-hit', type: 'button', tabindex: -1, 'aria-label': s.name },
-      head,
-      h('span', { class: 'pin-name', text: pinLabel(s.name) }));
-    const kind = s.scenes ? ' is-frame' : s.special ? ' is-special' : s.dummy ? ' is-dummy' : '';
+    const label = h('span', { class: 'pin-name', text: pinLabel(s.name) });
+    const hit = h('button', { class: 'pin-hit', type: 'button', tabindex: -1, 'aria-label': s.name }, head, label);
+    const kind = (s.scenes ? ' is-frame' : s.special ? ' is-special' : s.dummy ? ' is-dummy' : '') + (s.pick ? ' is-pick' : '');
     const el = h('div', { class: `pin lv${s.level}${kind} is-off` }, h('i', { class: 'pin-shadow' }), h('i', { class: 'pin-stem' }), hit);
     const obj = new CSS2DObject(el);
     obj.position.copy(world.at(s.lon, s.lat, 0.4));
@@ -45,7 +52,7 @@ export function createPins(app, world, sites) {
     const tier = tierOf(s);
     obj.renderOrder = 10 - tier; // 大事なピンほど上に重ねる
     world.pinScene.add(obj);
-    const p = { s, g: geomOf(s), el, hit, head, obj, tier, n: pins.size, show: showUnder(s), name: nameUnder(s), on: false, state: '', w: 0, offTimer: 0 };
+    const p = { s, g: geomOf(s), el, hit, head, label, obj, tier, n: pins.size, show: showUnder(s), name: nameUnder(s), on: false, today: false, state: '', w: 0, offTimer: 0 };
     if (s.scenes) {
       p.img = h('img', { alt: '', decoding: 'async' });
       head.append(p.img);
@@ -67,12 +74,27 @@ export function createPins(app, world, sites) {
     im.src = src;
   }
 
+  // 現代の地図に出す一押しの史跡は、いまの名前に、さかのぼる先の年を添える
+  function setToday(p, today) {
+    const s = p.s;
+    p.today = today;
+    p.g = geomOf(s, today);
+    p.el.classList.toggle('is-today', today);
+    if (s.special) p.el.classList.toggle('is-special', !today);
+    p.label.replaceChildren(today ? s.nowName ?? pinLabel(s.name) : pinLabel(s.name));
+    if (today) p.label.append(h('span', { class: 'pin-year', text: yearTag(s) }));
+    p.hit.setAttribute('aria-label', today ? `${s.nowName ?? pinLabel(s.name)}（${yearTag(s)}へさかのぼる）` : s.name);
+    p.w = 0;
+  }
+
   // ---------- 時代 ----------
   const fadeIn = new Set();
   let dirty = true, needMeasure = true;
   function setEra(era) {
     for (const p of pins.values()) {
-      const on = p.s.eras.includes(era.id);
+      const today = isToday(p.s, era);
+      if (today !== p.today) setToday(p, today);
+      const on = p.s.eras.includes(era.id) || today;
       if (on === p.on) continue;
       p.on = on;
       clearTimeout(p.offTimer);
@@ -258,10 +280,7 @@ export function createPins(app, world, sites) {
       A.anims.push(a2);
       return a2.finished;
     }).then(() => {
-      p.el.classList.remove('is-pop');
-      void p.el.offsetWidth;
-      p.el.classList.add('is-pop');
-      setTimeout(() => p.el.classList.remove('is-pop'), 320);
+      pop(p);
       A.dimTimer = setTimeout(() => g.classList.add('is-dim'), 2400);
     }).catch(() => { /* 途中で取り消した */ });
   }
@@ -285,6 +304,14 @@ export function createPins(app, world, sites) {
     return fit.find(clear) ?? fit[0] ?? STARTS[0];
   }
 
+  // ピンを一度だけ弾ませる
+  function pop(p) {
+    p.el.classList.remove('is-pop');
+    void p.el.offsetWidth;
+    p.el.classList.add('is-pop');
+    setTimeout(() => p.el.classList.remove('is-pop'), 320);
+  }
+
   function follow() {
     if (!A.drawn || !A.pin) return;
     headAt(A.pin, P);
@@ -294,11 +321,12 @@ export function createPins(app, world, sites) {
   }
 
   // ---------- 出来事に合わせる ----------
-  // 矢印を引く史跡：その時代の注目の史跡のうち、いちばん先に置くもの（どの時代にも出る写真の枠とダミーは除く）
-  const featuredOf = (era) => {
+  // 矢印を引く史跡：その時代に出ている注目の史跡のうち、いちばん先に置くもの（どの時代にも出る写真の枠とダミーは除く）。
+  // 現代では、一押しの門司港駅（現代の地図から 1914 年へさかのぼれる）がいちばん先になる
+  const featuredOf = () => {
     let best = null;
     for (const p of pins.values()) {
-      if (!p.s.featured || p.s.scenes || p.s.dummy || !p.s.eras.includes(era.id)) continue;
+      if (!p.s.featured || p.s.scenes || p.s.dummy || !p.on) continue;
       if (!best || p.tier < best.tier) best = p;
     }
     return best;
@@ -306,7 +334,7 @@ export function createPins(app, world, sites) {
   app.on('era', (era, prev) => {
     setEra(era);
     resetArrow();
-    A.pin = featuredOf(era);
+    A.pin = featuredOf();
     // 題字と同じく地名・ピンの書体も変わるので、大きさを測り直す
     if (prev?.font !== era.font) remeasure();
   });
@@ -362,5 +390,7 @@ export function createPins(app, world, sites) {
     holdArrow() { A.hold = true; clearTimeout(A.timer); },
     releaseArrow(delay = 1000) { A.hold = false; schedule(delay); },
     position: (id) => pins.get(id)?.obj.position,
+    // 現代へ戻ったとき、いまの場所のピンを弾ませる
+    pop(id) { const p = pins.get(id); if (p) pop(p); },
   };
 }

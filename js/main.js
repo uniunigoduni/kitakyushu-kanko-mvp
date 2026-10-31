@@ -7,8 +7,9 @@ import { clamp, easeInOut, reducedMotion, sceneAt } from './util.js';
 import { createTitle } from './ui/title.js';
 import { createTimeline } from './ui/timeline.js';
 import { createBand } from './ui/band.js';
-import { createPins } from './ui/pins.js';
+import { createPins, isToday } from './ui/pins.js';
 import { createPopup } from './ui/popup.js';
+import { createTravel } from './ui/travel.js';
 import { createAR } from './ar.js';
 import { createPay } from './pay.js';
 import { createFlavor } from './ui/flavor.js';
@@ -40,7 +41,7 @@ function timelineData(raw, sites) {
   let detail = (raw?.detail ?? [])
     .map((d) => ({ year: Number(d.year), era: d.era, text: d.text ?? d.label ?? d.title, siteId: d.siteId ?? d.site }))
     .filter((d) => Number.isFinite(d.year) && d.text);
-  if (!detail.length) detail = sites.map((s) => ({ year: s.year, era: s.eras[0], text: s.name, siteId: s.id }));
+  if (!detail.length) detail = sites.filter((s) => !s.dummy).map((s) => ({ year: s.year, era: s.eras[0], text: s.name, siteId: s.id }));
   return { major, detail };
 }
 
@@ -51,11 +52,13 @@ function fail(message, err) {
 }
 
 let geo, world;
-const [geoResult, sitesData, timelineRaw, arData] = await Promise.all([
+const [geoResult, sitesData, timelineRaw, arData, dummyData] = await Promise.all([
   loadGeo('data/').catch((err) => err),
   loadJSON('data/sites.json', { sites: [] }),
   loadJSON('data/timeline.json', null),
   loadJSON('data/ar.json', { sites: {}, panos: {} }),
+  // MVP 用のダミーの小さいピン（実在の史跡ではない。tools/build_dummy_pins.py）
+  loadJSON('data/dummy_pins.json', { sites: [] }),
 ]);
 if (geoResult instanceof Error) {
   fail('地図のデータを読み込めませんでした。ページを読み込み直してください。', geoResult);
@@ -67,7 +70,7 @@ if (geoResult instanceof Error) {
     fail('この端末では立体の地図を表示できませんでした。別のブラウザか、パソコンで開いてください。', err);
   }
 }
-if (world) start(world, sitesData?.sites ?? [], arData);
+if (world) start(world, [...(sitesData?.sites ?? []), ...(dummyData?.sites ?? []).map((s) => ({ ...s, dummy: true }))], arData);
 
 function start(world, sites, arData) {
   // 360度の画像がある史跡にだけ「ARで探検」を出す。
@@ -98,7 +101,7 @@ function start(world, sites, arData) {
     },
     emit(type, ...args) { for (const f of listeners.get(type) ?? []) f(...args); },
     setT: (t) => setT(t),
-    animateT, selectSite, deselect,
+    animateT, selectSite, deselect, backToNow,
     openAR: () => {},
     openPay: () => {},
   };
@@ -177,7 +180,15 @@ function start(world, sites, arData) {
     const s = app.byId.get(id);
     if (!s) return;
     if (app.selected === s) { if (from !== 'map') world.view(viewFor(s)); return; }
-    if (!s.eras.includes(app.era.id)) {
+    if (isToday(s, app.era)) {
+      // 現代の地図の一押しの史跡：その場所へ寄りながら、年を数えてその年までさかのぼる
+      deselect();
+      const e = eraOfSite(s);
+      const m = (e.t1 - e.t0) * 0.01;
+      world.view(viewFor(s));
+      if (!(await travel.go(s, clamp(yearToT(s.year + 0.5), e.t0 + m, e.t1 - m)))) return;
+      from = 'travel';
+    } else if (!s.eras.includes(app.era.id)) {
       // その史跡の時代へ移ってから開く
       deselect();
       const e = eraOfSite(s);
@@ -186,8 +197,13 @@ function start(world, sites, arData) {
     }
     app.selected = s;
     app.emit('select', s);
-    // 地図の上で押したときは、吹き出しが収まらない場合だけ視点を動かす
-    if (from !== 'map' || popup.cramped) world.view(viewFor(s));
+    // 地図の上で押したとき（さかのぼってきたときも）は、吹き出しが収まらない場合だけ視点を動かす
+    if ((from !== 'map' && from !== 'travel') || popup.cramped) world.view(viewFor(s));
+  }
+  // 一押しの史跡の吹き出しから、年を数えながら現代へ戻る。戻ったら、いまの場所のピンを弾ませる
+  async function backToNow(s) {
+    deselect();
+    if (await travel.go(s, T_NOW, true)) pins.pop(s.id);
   }
   function deselect() {
     const s = app.selected;
@@ -200,6 +216,7 @@ function start(world, sites, arData) {
   const { major, detail } = timelineData(timelineRaw, sites);
   const pins = createPins(app, world, sites);
   const popup = createPopup(app, world, pins);
+  const travel = createTravel(app, world);
   createZoom(world, popup);
   const ar = createAR(app, world, arData);
   app.openAR = (s, img) => ar.open(s, img);
