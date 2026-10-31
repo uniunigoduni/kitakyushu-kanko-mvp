@@ -59,7 +59,7 @@ export function buildTrees(geo, shared, count = 9000) {
     const x = x0 + (x1 - x0) * rand(), z = z0 + (z1 - z0) * rand();
     if (!geo.inMoji(x, z) || !geo.isLand(x, z)) continue;
     const h = geo.sample(geo.hm, x, z);
-    if (h < 12) continue;
+    if (h < 12 || geo.landYearAt(x, z) > -1e4) continue; // 埋め立て地には植えない
     const slope = geo.slopeAt(x, z);
     if (slope > 0.95) continue;
     // 森のまとまり：ノイズで濃い所と薄い所をつくる
@@ -152,6 +152,13 @@ function planTown(geo) {
   const wallOld = ['#8a7560', '#9b8a74', '#d6cdbb', '#7a6a58'];
   const wallNew = ['#d3cfc6', '#c1bcb2', '#aeaaa2', '#d9d2c4', '#b8b6b0'];
   const pick = (a) => a[Math.floor(rand() * a.length)];
+  // 埋め立て地には、陸になって 1〜7 年たってから建てる（ずらし方は場所で決める。rand() の並びは変えない）
+  const landed = (x, z, born) => {
+    const ly = geo.landYearAt(x, z);
+    if (ly < -1e4) return born;
+    const j = Math.abs(Math.sin(x * 12.9898 + z * 78.233) * 43758.5453) % 1;
+    return Math.max(born, ly + 1 + j * 6);
+  };
 
   // 古い集落（関所・宿場・漁村）
   for (const v of VILLAGES) {
@@ -161,8 +168,8 @@ function planTown(geo) {
       const r = v.r * Math.sqrt(rand()), a = rand() * Math.PI * 2;
       const x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r;
       if (!ok(x, z, 45, 0.3)) continue;
-      const born = v.start + (r / v.r) * 160 * rand();
-      out.push({ x, z, rot: angleAt(x, z, 0.4) + (rand() - 0.5) * 0.3, kind: 'house', born, y2: 1950 + rand() * 40,
+      const born = landed(x, z, v.start + (r / v.r) * 160 * rand());
+      out.push({ x, z, rot: angleAt(x, z, 0.4) + (rand() - 0.5) * 0.3, kind: 'house', born, y2: Math.max(born, 1950 + rand() * 40),
         w: 1.7 + rand() * 0.8, d: 1.3 + rand() * 0.6, h1: 0.9 + rand() * 0.35, h2: 1.4 + rand() * 1.4, wall: pick(wallOld), wall2: pick(wallNew),
         w2: 1.9 + rand() * 0.9, d2: 1.6 + rand() * 0.8 });
       placed++;
@@ -185,7 +192,7 @@ function planTown(geo) {
     for (let b = 0; b < k; b++) {
       const x = cx + (rand() - 0.5) * geo.dx * 0.9, z = cz + (rand() - 0.5) * geo.dz * 0.9;
       if (!ok(x, z)) continue;
-      const born = ty + rand() * 6;
+      const born = landed(x, z, ty + rand() * 6);
       const rot = angleAt(x, z, 0.62) + (rand() < 0.8 ? 0 : Math.PI / 2);
       if (ld < 2.2 && h < 7 && rand() < 0.55) {
         // 港の倉庫：はじめから大きな箱
@@ -193,7 +200,7 @@ function planTown(geo) {
         continue;
       }
       const core = coreDist < 1100;
-      const y2 = core ? 1912 + rand() * 26 : rand() < 0.12 ? 1e5 : Math.max(born + 22, 1952) + rand() * 32;
+      const y2 = Math.max(born, core ? 1912 + rand() * 26 : rand() < 0.12 ? 1e5 : Math.max(born + 22, 1952) + rand() * 32);
       const brick = core && y2 < 1940 && rand() < 0.4;
       const tall = core ? 2.6 + rand() * 3.4 : 1.4 + rand() * (y2 > 1965 ? 3.4 : 1.6);
       out.push({ x, z, rot, kind: 'house', born, y2, w: 1.7 + rand() * 0.9, d: 1.3 + rand() * 0.7, h1: 0.9 + rand() * 0.4, h2: tall,
@@ -210,14 +217,15 @@ export function buildTown(geo, shared) {
   const plan = planTown(geo);
   const group = new THREE.Group();
   group.name = 'town';
-  const vCommon = 'attribute float aBorn; attribute float aEnd; attribute vec3 aWall; attribute float aRoof; uniform vec3 uRoofCol; varying vec3 vBCol;';
+  const vCommon = 'attribute float aBorn; attribute float aEnd; attribute vec3 aWall; attribute float aRoof; attribute float aStep; uniform vec3 uRoofCol; uniform float uCoast; varying vec3 vBCol;';
+  // 埋め立て地の建物は、陸が水面から上がるのに合わせて出す（年を大きく飛ばしたとき、海の上に浮かないように）
   const vBegin = `
-    float bs = smoothstep(aBorn, aBorn + 2.0, uYear) * (1.0 - step(aEnd, uYear));
+    float bs = smoothstep(aBorn, aBorn + 2.0, uYear) * (1.0 - step(aEnd, uYear)) * clamp(uCoast - aStep + 1.0, 0.0, 1.0);
     float on = step(0.001, bs);
     transformed *= vec3(on, bs, on);
     vBCol = mix(aWall, uRoofCol * (0.75 + 0.25 * aWall), aRoof);`;
   const make = (geom, list, opts, key) => {
-    const patch = yearPatch(shared, vCommon, vBegin, { uRoofCol: { value: srgb(opts.roof) } });
+    const patch = yearPatch(shared, vCommon, vBegin, { uRoofCol: { value: srgb(opts.roof) }, uCoast: shared.uCoast });
     const mat = new THREE.MeshStandardMaterial({ roughness: 0.82, flatShading: true });
     mat.onBeforeCompile = (sh) => {
       patch(sh);
@@ -228,6 +236,7 @@ export function buildTown(geo, shared) {
     mat.customProgramCacheKey = () => 'town-' + key;
     const mesh = new THREE.InstancedMesh(geom, mat, list.length);
     const born = new Float32Array(list.length), end = new Float32Array(list.length), wall = new Float32Array(list.length * 3);
+    const step = new Float32Array(list.length);
     const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), c = new THREE.Color();
     list.forEach((b, i) => {
       const s = opts.scale(b);
@@ -236,12 +245,15 @@ export function buildTown(geo, shared) {
       m4.compose(new THREE.Vector3(b.x, y, b.z), q, new THREE.Vector3(s[0], s[1], s[2]));
       mesh.setMatrixAt(i, m4);
       born[i] = opts.born(b); end[i] = opts.end(b);
+      const k = geo.index(b.x, b.z);
+      step[i] = k >= 0 && geo.coastStep[k] !== 255 ? geo.coastStep[k] : 0;
       c.set(opts.wall(b));
       wall.set([c.r, c.g, c.b], i * 3);
     });
     mesh.geometry.setAttribute('aBorn', new THREE.InstancedBufferAttribute(born, 1));
     mesh.geometry.setAttribute('aEnd', new THREE.InstancedBufferAttribute(end, 1));
     mesh.geometry.setAttribute('aWall', new THREE.InstancedBufferAttribute(wall, 3));
+    mesh.geometry.setAttribute('aStep', new THREE.InstancedBufferAttribute(step, 1));
     mesh.customDepthMaterial = depthMaterialWith(patch, 'town-' + key);
     mesh.castShadow = true;
     mesh.receiveShadow = true;

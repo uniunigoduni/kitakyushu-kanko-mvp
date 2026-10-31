@@ -1,0 +1,40 @@
+{
+ "source": "国土地理院 地形分類（人工地形）タイル（盛土地・埋立地、干拓地）をもとに推測",
+ "layout": "uint8 from[nx*ny] row-major north→south: 0=いつの時代も陸, k=ERAS[k] の時代から陸, 255=海",
+ "eras": [
+  "jomon",
+  "yayoi",
+  "kofun",
+  "asuka",
+  "nara",
+  "heian",
+  "kamakura",
+  "muromachi",
+  "azuchi",
+  "edo",
+  "bakumatsu",
+  "meiji",
+  "taisho",
+  "showa_pre",
+  "war",
+  "postwar",
+  "growth",
+  "showa_late",
+  "heisei",
+  "now"
+ ],
+ "nx": 309,
+ "ny": 324,
+ "regions": [
+  "小森江〜大里の工場・西海岸の岸壁（大正）",
+  "門司港（明治に海を埋めて港と駅）",
+  "田野浦の埠頭（高度成長期）",
+  "太刀浦のコンテナ埠頭（昭和後期）",
+  "新門司・岸寄り（高度成長期）",
+  "新門司・沖（昭和後期）",
+  "猿喰新田（江戸・1759年ごろ干拓）",
+  "北九州空港の島（平成）",
+  "巌流島（ピンのまわり以外は高度成長期）",
+  "埋立地の印が抜けた低い切れはし（となりの埋立地と同じ時代）"
+ ]
+}

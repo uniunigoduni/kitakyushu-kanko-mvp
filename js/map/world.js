@@ -6,9 +6,10 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { GradeShader } from './grade.js';
-import { buildTerrain, buildWater, buildCoast, buildBorder } from './terrain.js';
+import { buildTerrain, buildWater, createCoastline } from './terrain.js';
 import { buildTrees, buildTown, buildRail, buildBridge } from './props.js';
 import { NOW_YEAR } from '../eras.js';
+import { reducedMotion } from '../util.js';
 
 CameraControls.install({ THREE });
 
@@ -24,11 +25,11 @@ export const LABELS = [
   { t: '大里', lat: 33.9050, lon: 130.9330, cls: 'town' },
   { t: '田野浦', lat: 33.9560, lon: 130.9870, cls: 'village' },
   { t: '白野江', lat: 33.9520, lon: 131.0030, cls: 'village' },
-  { t: '青浜', lat: 33.9474, lon: 131.0194, cls: 'village' },
+  { t: '青浜', lat: 33.9474, lon: 131.0168, cls: 'village' },
   { t: '恒見', lat: 33.8521, lon: 130.9849, cls: 'village' },
   { t: '新門司', lat: 33.8618, lon: 130.9953, cls: 'town', from: 1971 },
   { t: '和布刈', lat: 33.9610, lon: 130.9622, cls: 'small' },
-  { t: '部埼', lat: 33.9637, lon: 131.0161, cls: 'small' },
+  { t: '部埼', lat: 33.9577, lon: 131.0193, cls: 'small' },
   { t: '風師山', lat: 33.9236, lon: 130.9564, cls: 'peak' },
   { t: '戸ノ上山', lat: 33.8640, lon: 130.9226, cls: 'peak' },
   { t: '古城山', lat: 33.9583, lon: 130.9687, cls: 'peak small' },
@@ -96,15 +97,15 @@ export async function createWorld(container, geo) {
   sun.shadow.radius = 2.5;
   scene.add(hemi, sun, sun.target);
 
+  // 時代の海岸線を先に作る（地形・海・町が、その uniform を使う）
+  const coastline = createCoastline(geo, shared);
   const terrain = buildTerrain(geo, shared);
   const water = buildWater(geo, shared);
-  const coast = buildCoast(geo, shared);
-  const border = buildBorder(geo, shared);
   const trees = buildTrees(geo, shared);
   const town = buildTown(geo, shared);
   const rail = buildRail(geo, shared);
   const bridge = buildBridge(geo);
-  scene.add(water, terrain, coast, border, trees, town, rail, bridge);
+  scene.add(water, terrain, coastline.group, trees, town, rail, bridge);
   // 特別な場面の船・汽車・炎などはここに入れる
   const fxRoot = new THREE.Group();
   fxRoot.name = 'fx';
@@ -138,7 +139,8 @@ export async function createWorld(container, geo) {
     const obj = new CSS2DObject(el);
     obj.position.set(x, Math.max(0, geo.heightAt(x, z)) + lift, z);
     labelScene.add(obj);
-    return { ...L, el, obj, name: L.t, on: true, w: 0, h: 0 };
+    // 埋め立て地の地名（新門司・空港）は、陸が上がってから出す
+    return { ...L, el, obj, name: L.t, on: true, w: 0, h: 0, step: L.from ? geo.coastStepAt(L.from) : 0 };
   });
   // ピンの下に入った地名は消す（ピンの側から、画面上の四角を渡してもらう）
   let blockers = null;
@@ -342,12 +344,49 @@ export async function createWorld(container, geo) {
     const focus = fx.focus ?? 1 - cy / H;
     grade.uniforms.uTilt.value = [fx.tilt * pr, focus, fx.tilt > 3 ? 0.12 : 0.2];
   }
+  // 時代の海岸線：年が変わったら、陸の形を少し時間をかけて移す（v は段の番号。小数のときは2つの段の間）。
+  // 行き先が途中で変わっても止まらないよう、ばねのように追いかける（SmoothDamp と同じ式）
+  const coast = { v: coastline.steps - 1, to: coastline.steps - 1, vel: 0 };
+  const railStep = geo.coastStepAt(rail.userData.from);
+  function coastTo(s, instant = false) {
+    coast.to = s;
+    if (instant || reducedMotion()) {
+      coast.v = s; coast.vel = 0;
+      showCoast();
+      scheduleShadow();
+    }
+    wake();
+  }
+  function stepCoast(dt) {
+    if (coast.v === coast.to && coast.vel === 0) return;
+    const T = 0.3, maxChange = 3; // T 秒ほどで追いつく。遠いときは 1 秒あたり 10 段くらいまで
+    const w = 2 / T, x = w * dt, ex = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
+    const change = clamp(coast.v - coast.to, -maxChange, maxChange);
+    const tmp = (coast.vel + w * change) * dt;
+    coast.vel = (coast.vel - w * tmp) * ex;
+    let v = coast.v - change + (change + tmp) * ex;
+    if ((coast.to - coast.v > 0) === (v > coast.to)) { v = coast.to; coast.vel = 0; }
+    if (Math.abs(coast.to - v) < 0.002 && Math.abs(coast.vel) < 0.02) { v = coast.to; coast.vel = 0; }
+    coast.v = v;
+    showCoast();
+    wake();
+    if (v === coast.to) scheduleShadow();
+  }
+  function showCoast() {
+    coastline.show(coast.v);
+    // 線路は埋め立てた岸に沿うので、陸が上がってから出す
+    rail.visible = year >= rail.userData.from && coast.v > railStep - 0.25;
+  }
+  // 年を大きく飛ばしたあと（最初の画面など）に、海岸線をその場で合わせる
+  function settleCoast() { coastTo(coast.to, true); }
+
   let year = NOW_YEAR;
   function setYear(y) {
     if (y === year) return;
     year = y;
     shared.uYear.value = y;
-    rail.visible = y >= rail.userData.from;
+    coastTo(geo.coastStepAt(y));
+    rail.visible = y >= rail.userData.from && coast.v > railStep - 0.25;
     bridge.visible = y >= bridge.userData.from;
     for (const L of labels) {
       let name = L.t;
@@ -396,7 +435,7 @@ export async function createWorld(container, geo) {
     }
     const rects = blockers?.() ?? [];
     for (const L of labels) {
-      let on = !(L.from && year < L.from);
+      let on = !(L.from && (year < L.from || coast.v < L.step - 0.25));
       if (L.cls.includes('small')) on &&= r < 0.62;
       else if (L.cls.includes('peak')) on &&= r < 0.9;
       else if (L.cls.includes('village')) on &&= r < 1.25;
@@ -477,6 +516,7 @@ export async function createWorld(container, geo) {
     shared.uTime.value = time;
     const moved = controls.update(dt);
     if (moved) { lastMove = now; updateShadow(now); }
+    stepCoast(dt);
     for (const f of hooks) f(dt, time);
     updateLabels();
     // 動きが止まって 2 秒たったら 1 コマおきに描く
@@ -535,6 +575,7 @@ export async function createWorld(container, geo) {
 
   resize();
   setYear(NOW_YEAR - 0.5);
+  settleCoast();
   controls.setLookAt(...homePosition(), home.target.x, home.target.y, home.target.z, false);
   controls.update(0);
   fitShadowToView();
@@ -550,7 +591,7 @@ export async function createWorld(container, geo) {
     layers: { labels: labelRenderer.domElement, pins: pinRenderer.domElement },
     get year() { return year; }, get size() { return { W, H }; },
     get home() { return home; }, get quality() { return quality; }, get safe() { return { ...safe }; },
-    setYear, setNight, setFx, setSafeArea, focusShadow,
+    setYear, settleCoast, setNight, setFx, setSafeArea, focusShadow,
     project, toGround, at, view, goHome, zoom, canZoom, wake, pause,
     onFrame(f) { hooks.add(f); return () => hooks.delete(f); },
     distance: () => controls.distance,

@@ -1,9 +1,10 @@
 // 地形・海・海岸線・区の境界。色は自然な色で作り、どの時代も同じ色で見せる。
+// 海岸線は時代で変わる：埋め立て地はその時代まで水面の下に沈めておき、時代が変わると上がってくる（geo.js の「段」）。
 import * as THREE from 'three';
 import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
-import { Y_PER_M, townYearFn } from './geo.js';
+import { Y_PER_M, SUNK, townYearFn } from './geo.js';
 
 // 地図の端で背景色へ溶かす。端の線がまっすぐにならないよう、ゆるい揺らぎを足す
 export const EDGE_GLSL = /* glsl */`
@@ -27,16 +28,14 @@ const tmpC = new THREE.Color();
 // 標高・傾き・海からの距離で地面の色を決める（sRGB で考えて線形にする）
 const C = {
   sand: srgb('#d8c9a0'), field: srgb('#a7ad73'), low: srgb('#7f9a5a'), forest: srgb('#587747'),
-  high: srgb('#4f6a43'), peak: srgb('#6d7357'), rock: srgb('#8c8676'),
+  high: srgb('#4f6a43'), peak: srgb('#6d7357'), rock: srgb('#8c8676'), wall: srgb('#c4c0b6'),
 };
 function groundColor(geo, k, out) {
   const h = geo.hm[k];
-  const ld = geo.landDist[k];
   if (h < 18) out.copy(C.field).lerp(C.low, h / 18);
   else if (h < 110) out.copy(C.low).lerp(C.forest, (h - 18) / 92);
   else if (h < 330) out.copy(C.forest).lerp(C.high, (h - 110) / 220);
   else out.copy(C.high).lerp(C.peak, Math.min(1, (h - 330) / 220));
-  if (ld <= 1.01 && h < 5) out.lerp(C.sand, 0.75);
   return out;
 }
 
@@ -51,38 +50,54 @@ function concavity(geo, i, j) {
   return s / n - geo.hm[j * geo.nx + i];
 }
 
+// 埋め立て地の頂点：段 aFrom になるまで沈め、uCoast が aFrom - 1 → aFrom と進む間に水面から上げる
+const RISE_GLSL = /* glsl */`
+  float rise = aFrom > 0.5 ? clamp(uCoast - aFrom + 1.0, 0.0, 1.0) : 1.0;
+  transformed.y = mix(${SUNK.toFixed(2)}, transformed.y, rise);`;
+
 export function buildTerrain(geo, shared) {
   const { nx, ny } = geo;
   const n = nx * ny;
-  const pos = new Float32Array(n * 3), col = new Float32Array(n * 3);
-  const aMask = new Float32Array(n), aTown = new Float32Array(n);
+  const pos = new Float32Array(n * 3), col = new Float32Array(n * 3), shoreCol = new Float32Array(n * 3), wallCol = new Float32Array(n * 3);
+  const aMask = new Float32Array(n), aTown = new Float32Array(n), aFrom = new Float32Array(n);
   const townYear = townYearFn(geo);
-  const c = new THREE.Color();
+  const c = new THREE.Color(), sand = new THREE.Color(), wall = new THREE.Color();
   for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
     const k = j * nx + i;
     const x = geo.xOf(i), z = geo.zOf(j);
     pos.set([x, geo.y[k], z], k * 3);
     if (geo.land[k]) {
       groundColor(geo, k, c);
+      // 海ぎわにあるときの色（低い所だけ）：元からの浜は砂、埋め立て地は護岸のコンクリート。どちらを出すかは時代の形で決める
+      sand.copy(c); wall.copy(c);
+      if (geo.hm[k] < 5) { sand.lerp(C.sand, 0.75); wall.lerp(C.wall, 0.8); }
       // 急な斜面は岩の色
-      const s = geo.slopeAt(x, z);
-      c.lerp(C.rock, Math.min(1, Math.max(0, (s - 0.45) / 0.5)) * 0.6);
+      const rock = Math.min(1, Math.max(0, (geo.slopeAt(x, z) - 0.45) / 0.5)) * 0.6;
       // 谷は暗く、尾根は少し明るく（光の回り込みを色に焼き込む）。区の外は弱める
       const conc = concavity(geo, i, j) * (geo.mask[k] ? 1 : 0.35);
-      c.multiplyScalar(1 - Math.min(0.24, Math.max(0, conc / 55)) + Math.min(0.06, Math.max(0, -conc / 90)));
-      if (!geo.mask[k]) {
-        // 門司区の外は「地名と海岸線くらい」：色を抜いて暗くし、区から離れるほど背景へ沈める
-        const l = c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722;
-        const far = Math.min(1, geo.wardDist[k] / 30);
-        c.lerp(tmpC.setRGB(l, l, l), 0.75).multiplyScalar(0.5 - 0.18 * far);
+      const shade = 1 - Math.min(0.24, Math.max(0, conc / 55)) + Math.min(0.06, Math.max(0, -conc / 90));
+      const far = Math.min(1, geo.wardDist[k] / 30);
+      for (const t of [c, sand, wall]) {
+        t.lerp(C.rock, rock).multiplyScalar(shade);
+        if (!geo.mask[k]) {
+          // 門司区の外は「地名と海岸線くらい」：色を抜いて暗くし、区から離れるほど背景へ沈める
+          const l = t.r * 0.2126 + t.g * 0.7152 + t.b * 0.0722;
+          t.lerp(tmpC.setRGB(l, l, l), 0.75).multiplyScalar(0.5 - 0.18 * far);
+        }
       }
     } else {
       c.copy(C.sand).multiplyScalar(0.55);
+      sand.copy(c); wall.copy(c);
     }
     col.set([c.r, c.g, c.b], k * 3);
+    shoreCol.set([sand.r, sand.g, sand.b], k * 3);
+    wallCol.set([wall.r, wall.g, wall.b], k * 3);
     aMask[k] = geo.mask[k];
+    // 埋め立て地は陸になる段の番号（元からの陸と海は 0）
+    aFrom[k] = geo.land[k] ? geo.coastStep[k] : 0;
     const h = geo.hm[k];
-    aTown[k] = geo.mask[k] && geo.land[k] && h < 60 && geo.slopeAt(x, z) < 0.22 ? townYear(x, z) : 1e5;
+    // 町の色は、陸になってから
+    aTown[k] = geo.mask[k] && geo.land[k] && h < 60 && geo.slopeAt(x, z) < 0.22 ? Math.max(townYear(x, z), geo.landYear[k]) : 1e5;
   }
   // 四隅とも海のマスは水の下に隠れるので作らない。区の外（四隅とも区の外）は別の面にする
   const idxIn = [], idxOut = [];
@@ -96,7 +111,8 @@ export function buildTerrain(geo, shared) {
   }
   const attrs = {
     position: new THREE.BufferAttribute(pos, 3), color: new THREE.BufferAttribute(col, 3),
-    aMask: new THREE.BufferAttribute(aMask, 1), aTown: new THREE.BufferAttribute(aTown, 1),
+    aMask: new THREE.BufferAttribute(aMask, 1), aTown: new THREE.BufferAttribute(aTown, 1), aFrom: new THREE.BufferAttribute(aFrom, 1),
+    aShore: new THREE.BufferAttribute(shoreCol, 3), aWall: new THREE.BufferAttribute(wallCol, 3),
   };
   // 法線は区の内外をまとめて求める（境目に継ぎ目が出ないように）
   const all = new THREE.BufferGeometry();
@@ -125,20 +141,32 @@ export function buildTerrain(geo, shared) {
     Object.assign(sh.uniforms, {
       uYear: shared.uYear, uBg: shared.uBg, uEdge: shared.uEdge,
       uTownCol: { value: srgb('#b9b1a1') },
+      uCoast: shared.uCoast, uCoastMix: shared.uCoastMix, uCoastTex: shared.uCoastTex, uCoastGrid: shared.uCoastGrid, uCoastSize: shared.uCoastSize,
     });
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', `#include <common>
-        attribute float aMask; attribute float aTown;
-        varying float vMask; varying float vTown; varying vec3 vWP;`)
+        attribute float aMask; attribute float aTown; attribute float aFrom; attribute vec3 aShore; attribute vec3 aWall;
+        uniform float uCoast;
+        varying float vMask; varying float vTown; varying vec3 vWP; varying vec3 vShore; varying vec3 vWall; varying float vRecl;`)
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+        ${RISE_GLSL}`)
       .replace('#include <fog_vertex>', `#include <fog_vertex>
-        vMask = aMask; vTown = aTown; vWP = (modelMatrix * vec4(transformed, 1.0)).xyz;`);
+        vMask = aMask; vTown = aTown; vWP = (modelMatrix * vec4(transformed, 1.0)).xyz;
+        vShore = aShore; vWall = aWall; vRecl = step(0.5, aFrom) * rise;`);
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', `#include <common>
-        uniform float uYear; uniform vec3 uBg, uTownCol; uniform vec4 uEdge;
-        varying float vMask; varying float vTown; varying vec3 vWP;
+        uniform float uYear, uCoastMix; uniform vec3 uBg, uTownCol; uniform vec4 uEdge, uCoastGrid;
+        uniform sampler2D uCoastTex; uniform vec2 uCoastSize;
+        varying float vMask; varying float vTown; varying vec3 vWP; varying vec3 vShore; varying vec3 vWall; varying float vRecl;
         ${EDGE_GLSL}`)
       .replace('#include <color_fragment>', `#include <color_fragment>
         float inMoji = smoothstep(0.35, 0.65, vMask);
+        // 埋め立て地は少し色を抜く（草木の少ない造成地）
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722)) * 1.06), 0.3 * vRecl * inMoji);
+        // 海ぎわ（その時代の陸の形で、海から 1 マスまで）：元からの浜は幅のある砂、埋め立て地は細い護岸
+        vec4 cd = texture2D(uCoastTex, ((vWP.xz + uCoastGrid.xy) / uCoastGrid.zw + 0.5) / uCoastSize);
+        float shore = 1.0 - smoothstep(mix(1.0, 0.75, vRecl), mix(1.6, 1.05, vRecl), mix(cd.b, cd.a, uCoastMix) * 255.0 / 16.0);
+        diffuseColor.rgb = mix(diffuseColor.rgb, mix(vShore, vWall, vRecl), shore);
         // 町になった所は地面を灰色に（年とともに広がる）
         float town = smoothstep(vTown, vTown + 18.0, uYear) * inMoji;
         diffuseColor.rgb = mix(diffuseColor.rgb, uTownCol, town * 0.55);
@@ -154,9 +182,19 @@ export function buildTerrain(geo, shared) {
         gl_FragColor.rgb = mix(uBg, gl_FragColor.rgb, edgeFade(vWP.xz));`);
   };
   mat.customProgramCacheKey = () => 'terrain';
+  // 影を作るときも、沈めている埋め立て地は沈めたまま
+  const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
+  depth.onBeforeCompile = (sh) => {
+    sh.uniforms.uCoast = shared.uCoast;
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute float aFrom; uniform float uCoast;')
+      .replace('#include <begin_vertex>', `#include <begin_vertex>\n${RISE_GLSL}`);
+  };
+  depth.customProgramCacheKey = () => 'terrain-depth';
   // 区の中は影を落とす・受ける。区の外は受けるだけ（外の山の影で目立たせない）
   const inner = new THREE.Mesh(part(idxIn), mat);
   inner.castShadow = inner.receiveShadow = true;
+  inner.customDepthMaterial = depth;
   inner.name = 'terrain-moji';
   const outer = new THREE.Mesh(part(idxOut), mat);
   outer.receiveShadow = true;
@@ -169,23 +207,14 @@ export function buildTerrain(geo, shared) {
 
 // 海：陸からの距離で浅瀬の色・岸の泡を出す。波は面の向きだけ（細かい波は遠くでは消す）
 export function buildWater(geo, shared) {
-  const { nx, ny } = geo;
-  const tex = new Uint8Array(nx * ny);
-  for (let k = 0; k < nx * ny; k++) tex[k] = geo.land[k] ? 0 : Math.min(255, Math.round(geo.seaDist[k] * 16));
-  const dist = new THREE.DataTexture(tex, nx, ny, THREE.RedFormat, THREE.UnsignedByteType);
-  dist.magFilter = dist.minFilter = THREE.LinearFilter;
-  dist.wrapS = dist.wrapT = THREE.ClampToEdgeWrapping;
-  dist.needsUpdate = true;
-
   const size = 1.6;
   const g = new THREE.PlaneGeometry(geo.W * size, geo.D * size, 200, 200);
   g.rotateX(-Math.PI / 2);
   const uniforms = {
     uTime: shared.uTime, uBg: shared.uBg, uEdge: shared.uEdge, uNight: shared.uNight,
     uSunDir: shared.uSunDir,
-    uDist: { value: dist },
-    uGrid: { value: new THREE.Vector4(geo.W / 2, geo.D / 2, geo.dx, geo.dz) },
-    uTexSize: { value: new THREE.Vector2(nx, ny) },
+    // 陸からの距離は、時代の海岸線の2つの形を混ぜたもの（createCoastline）
+    uDist: shared.uCoastTex, uDistMix: shared.uCoastMix, uGrid: shared.uCoastGrid, uTexSize: shared.uCoastSize,
     uDeep: { value: srgb('#1c4660') }, uShallow: { value: srgb('#4a9298') },
     uSky: { value: srgb('#b8cdd6') }, uFoam: { value: srgb('#f3f0e6') }, uSunCol: { value: srgb('#fff4dc') },
     uFlow: shared.uFlow,
@@ -203,7 +232,7 @@ export function buildWater(geo, shared) {
         gl_Position = projectionMatrix * viewMatrix * wp;
       }`,
     fragmentShader: /* glsl */`
-      uniform float uTime, uNight;
+      uniform float uTime, uNight, uDistMix;
       uniform sampler2D uDist;
       uniform vec4 uGrid, uEdge, uFlow;
       uniform vec2 uTexSize;
@@ -219,7 +248,8 @@ export function buildWater(geo, shared) {
       float seaDist(vec2 p) {
         vec2 g = (p + uGrid.xy) / uGrid.zw;
         vec2 uv = (g + 0.5) / uTexSize;
-        return texture2D(uDist, uv).r * 255.0 / 16.0;
+        vec4 t = texture2D(uDist, uv);
+        return mix(t.r, t.g, uDistMix) * 255.0 / 16.0;
       }
       // 向きの違う波を重ねる。画面で 2px より細かい波は消す（遠くでちらつかないように）
       vec2 wave(vec2 p, vec2 dir, float k, float slope, float w, float fw) {
@@ -286,10 +316,10 @@ export function fadeLineMaterial(params, shared, key) {
   return m;
 }
 
-// 海岸線：頂点の高さ 0 の等値線（マーチングスクエア）
-export function buildCoast(geo, shared) {
+// 海岸線：頂点の高さ 0 の等値線（マーチングスクエア）。Y はその時代の陸の形の高さ
+function coastSegments(geo, Y) {
   const { nx, ny } = geo;
-  const Y = geo.y, out = [];
+  const out = [];
   const lift = 0.25;
   const lerpPt = (ka, kb, ia, ja, ib, jb) => {
     const t = Y[ka] / (Y[ka] - Y[kb]);
@@ -317,16 +347,11 @@ export function buildCoast(geo, shared) {
       case 10: if (center) { seg(L(), T()); seg(R(), B()); } else { seg(T(), R()); seg(L(), B()); } break;
     }
   }
-  const g = new LineSegmentsGeometry().setPositions(out);
-  const mat = fadeLineMaterial({ color: 0x241f1a, linewidth: 1.3, transparent: true, opacity: 0.3, depthWrite: false }, shared, 'coast');
-  const line = new LineSegments2(g, mat);
-  line.name = 'coast';
-  line.renderOrder = 2;
-  return line;
+  return out;
 }
 
 // 門司区の境界（陸の上だけ、地面に沿わせる）
-export function buildBorder(geo, shared) {
+function borderSegments(geo, Y) {
   const out = [];
   const step = 2.5;
   for (const ring of geo.mojiRings) {
@@ -337,7 +362,7 @@ export function buildBorder(geo, shared) {
       const m = Math.max(1, Math.ceil(len / step));
       for (let s = 0; s < m; s++) {
         const x = x0 + (x1 - x0) * s / m, z = z0 + (z1 - z0) * s / m;
-        const h = geo.heightAt(x, z);
+        const h = geo.sample(Y, x, z);
         pts.push(h > 0.05 ? [x, h + 0.5, z] : null);
       }
     }
@@ -346,10 +371,83 @@ export function buildBorder(geo, shared) {
       if (p && q) out.push(...p, ...q);
     }
   }
-  const g = new LineSegmentsGeometry().setPositions(out);
-  const mat = fadeLineMaterial({ color: 0xf4ead6, linewidth: 1.6, transparent: true, opacity: 0.5, depthWrite: false }, shared, 'border');
-  const line = new LineSegments2(g, mat);
-  line.name = 'border';
-  line.renderOrder = 3;
-  return line;
+  return out;
+}
+
+// 時代の海岸線。陸の形の段（geo.coastEras）を v = 0〜最後 の数で表し、v の整数の段 A と次の段 B を小数部で混ぜて見せる。
+// 地形・海のシェーダーが使う uniform（uCoast・uCoastTex など）もここで shared に入れる
+export function createCoastline(geo, shared) {
+  const { nx, ny } = geo, n = nx * ny;
+  const last = geo.coastEras.length - 1;
+  // 距離のテクスチャ：R/G = 海のマスから陸まで（段 A/B）、B/A = 陸のマスから海まで（段 A/B）。1マス = 16
+  const data = new Uint8Array(n * 4);
+  const tex = new THREE.DataTexture(data, nx, ny, THREE.RGBAFormat, THREE.UnsignedByteType);
+  tex.magFilter = tex.minFilter = THREE.LinearFilter;
+  tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+  Object.assign(shared, {
+    uCoast: { value: last }, uCoastMix: { value: 0 }, uCoastTex: { value: tex },
+    uCoastGrid: { value: new THREE.Vector4(geo.W / 2, geo.D / 2, geo.dx, geo.dz) },
+    uCoastSize: { value: new THREE.Vector2(nx, ny) },
+  });
+  const put = (s, ch) => {
+    const { seaDist, landDist } = geo.coastShape(s);
+    for (let k = 0; k < n; k++) {
+      data[k * 4 + ch] = Math.min(255, Math.round(seaDist[k] * 16));
+      data[k * 4 + 2 + ch] = Math.min(255, Math.round(landDist[k] * 16));
+    }
+    tex.needsUpdate = true;
+  };
+
+  // 線は段ごとに作って覚えておく。A・B の2本ずつを重ね、濃さで混ぜる
+  const made = new Map();
+  const shape = (s) => {
+    let g = made.get(s);
+    if (!g) {
+      const Y = geo.coastShape(s).y;
+      g = {
+        coast: new LineSegmentsGeometry().setPositions(coastSegments(geo, Y)),
+        border: new LineSegmentsGeometry().setPositions(borderSegments(geo, Y)),
+      };
+      made.set(s, g);
+    }
+    return g;
+  };
+  const group = new THREE.Group();
+  group.name = 'coastline';
+  const pair = (kind, params, order) => ['a', 'b'].map((ab) => {
+    const line = new LineSegments2(shape(last)[kind], fadeLineMaterial(params, shared, kind));
+    line.name = `${kind}-${ab}`;
+    line.renderOrder = order;
+    group.add(line);
+    return line;
+  });
+  const LINES = [
+    { lines: pair('coast', { color: 0x241f1a, linewidth: 1.3, transparent: true, opacity: 0.3, depthWrite: false }, 2), kind: 'coast', opacity: 0.3 },
+    { lines: pair('border', { color: 0xf4ead6, linewidth: 1.6, transparent: true, opacity: 0.5, depthWrite: false }, 3), kind: 'border', opacity: 0.5 },
+  ];
+
+  let A = -1, B = -1;
+  function show(v) {
+    v = Math.min(Math.max(v, 0), last);
+    const a = Math.floor(v), b = Math.min(a + 1, last), m = v - a;
+    if (a !== A) { A = a; put(a, 0); }
+    if (b !== B) { B = b; put(b, 1); }
+    shared.uCoast.value = v;
+    shared.uCoastMix.value = m;
+    for (const L of LINES) {
+      const [la, lb] = L.lines;
+      la.geometry = shape(a)[L.kind]; lb.geometry = shape(b)[L.kind];
+      la.material.opacity = L.opacity * (1 - m); lb.material.opacity = L.opacity * m;
+      la.visible = m < 0.99; lb.visible = m > 0.01;
+    }
+  }
+  show(last);
+
+  // 残りの段の形と線を、手のあいたときに先に作っておく（年を大きく動かしたときに引っかからないように）
+  const idle = window.requestIdleCallback ? (f) => requestIdleCallback(f, { timeout: 1500 }) : (f) => setTimeout(f, 50);
+  let next = last - 1;
+  const warm = () => { if (next < 0) return; shape(next--); idle(warm); };
+  idle(warm);
+
+  return { group, show, steps: last + 1 };
 }

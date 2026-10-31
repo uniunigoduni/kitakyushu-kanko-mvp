@@ -1,16 +1,22 @@
 // 地形データ（国土地理院の標高・門司区の範囲）と、緯度経度 ⇔ 3D座標の変換。
 // 1単位 = 10 m。高さは 1.7 倍に強調する。x = 東、z = 南、y = 上。
+import { ERAS } from '../eras.js';
+
 export const UNIT = 10;
 export const VEX = 1.7;
 export const Y_PER_M = VEX / UNIT;
 const SEA = -32768;
+// まだ埋め立てていない所の高さ（水面のすぐ下に沈めておく）
+export const SUNK = -0.15;
 
 export async function loadGeo(base = 'data/') {
-  const [meta, buf] = await Promise.all([
+  const [meta, buf, coast] = await Promise.all([
     fetch(base + 'terrain.json').then((r) => r.json()),
     fetch(base + 'terrain.bin').then((r) => r.arrayBuffer()),
+    // 時代ごとの海岸線（埋め立て・干拓の推測。tools/build_coast.py）。読めなければ今の形のまま
+    fetch(base + 'coast.bin').then((r) => (r.ok ? r.arrayBuffer() : null)).catch(() => null),
   ]);
-  return new Geo(meta, buf);
+  return new Geo(meta, buf, coast);
 }
 
 // 陸（または海）からの距離（マス数）。1 と √2 の重みで2回なめる。
@@ -44,7 +50,7 @@ function distanceField(isSource, nx, ny) {
 }
 
 export class Geo {
-  constructor(meta, buf) {
+  constructor(meta, buf, coast = null) {
     const { nx, ny } = meta;
     this.meta = meta;
     this.nx = nx; this.ny = ny;
@@ -76,7 +82,47 @@ export class Geo {
     }
     this.mojiBox = { x0, x1, z0, z1 };
     this.mojiRings = meta.mojiRings.map((r) => r.map(([mx, mz]) => [mx / UNIT, mz / UNIT]));
+
+    // 埋め立て・干拓：陸のマスが陸になった時代（0 = 元からの陸）。形が変わる時代だけを「段」に並べ、
+    // coastStep[k] にその段の番号を入れる（海は 255）。段 s の形 = 段 s 以下のマスだけが陸
+    const from = coast?.byteLength === n ? new Uint8Array(coast) : null;
+    const eraOf = (k) => (from && from[k] < ERAS.length ? from[k] : 0);
+    const used = new Set([0]);
+    for (let k = 0; k < n; k++) if (this.land[k]) used.add(eraOf(k));
+    this.coastEras = [...used].sort((a, b) => a - b);
+    const stepOf = new Uint8Array(ERAS.length);
+    this.coastEras.forEach((e, s) => { stepOf[e] = s; });
+    this.coastStep = new Uint8Array(n).fill(255);
+    this.landYear = new Float32Array(n).fill(-1e5); // 陸になった年（元からの陸と海は -1e5）
+    for (let k = 0; k < n; k++) {
+      if (!this.land[k]) continue;
+      const e = eraOf(k);
+      this.coastStep[k] = stepOf[e];
+      if (e) this.landYear[k] = ERAS[e].start;
+    }
+    this.shapes = new Map();
   }
+
+  // その年の海岸線の段
+  coastStepAt(year) {
+    let s = 0;
+    for (let i = 1; i < this.coastEras.length; i++) if (ERAS[this.coastEras[i]].start <= year) s = i;
+    return s;
+  }
+  // 段 s の陸の形：海のマスから陸まで・陸のマスから海までの距離と、頂点の高さ（初めて使うときに作って覚えておく）
+  coastShape(s) {
+    let c = this.shapes.get(s);
+    if (c) return c;
+    const { nx, ny } = this;
+    const on = (k) => this.coastStep[k] <= s;
+    const y = this.y.slice();
+    for (let k = 0; k < y.length; k++) if (this.land[k] && !on(k)) y[k] = SUNK;
+    c = { seaDist: distanceField(on, nx, ny), landDist: distanceField((k) => !on(k), nx, ny), y };
+    this.shapes.set(s, c);
+    return c;
+  }
+  // その地点が陸になった年（元からの陸は -1e5）
+  landYearAt(x, z) { const k = this.index(x, z); return k < 0 ? -1e5 : this.landYear[k]; }
 
   toXZ(lon, lat) {
     const c = this.meta.center;

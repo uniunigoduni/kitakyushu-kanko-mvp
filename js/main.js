@@ -237,6 +237,7 @@ function start(world, sites, arData) {
   const startT = linkSite ? clamp(yearToT(linkSite.year), eraOfSite(linkSite).t0, eraOfSite(linkSite).t1 - 1e-6)
     : linkEra ? linkEra.tc : linkT ?? (playIntro ? 0 : T_NOW);
   setT(startT);
+  world.settleCoast(); // 最初の画面は、その時代の海岸線から始める
 
   // 題字の書体がそろうまで待つ（最大 1.5 秒）
   const fonts = ['32px "Moji Brush"', '600 29px "Moji Mincho"', '700 27px "Moji Gothic"'].map((f) => document.fonts.load(f, '門司ヒストリーマップ現代'));
