@@ -4,7 +4,14 @@
 ポップアップの「ARで探検」ボタン用に、見どころを切り出した小さな画像も作る。
 
 使い方: uv run -q --with pillow --with numpy python tools/build_pano.py [生成画像のフォルダ]
+
+data/ar.json で video がある史跡（壇ノ浦）は、ここでは作らない。画像は動画の1コマ目をそのまま使う:
+  ffmpeg -i assets/video/dannoura.mp4 -frames:v 1 \
+    -vf "scale=in_color_matrix=bt709:in_range=tv:out_range=pc,format=rgb24" frame0.png
+  frame0.png を大きさそのままで assets/pano/dannoura.jpg（quality=82）に、
+  ar.json の crop の範囲を 704x320 に縮めて dannoura_thumb.jpg（quality=80）にする。
 """
+import json
 import pathlib
 import sys
 
@@ -13,6 +20,7 @@ from PIL import Image
 
 RAW = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else "/var/tmp/kitakyushu/pano/raw")
 OUT = pathlib.Path(__file__).resolve().parent.parent / "assets" / "pano"
+AR = OUT.parent.parent / "data" / "ar.json"
 BLEND = 0.10  # 端を重ねる幅（横幅に対する割合）
 
 # 生成画像に入った意味のない文字を、すぐ横の壁で塗りつぶす: ((x0, y0, x1, y1), 写す元の左端x, 写す元の幅)
@@ -21,7 +29,7 @@ PATCHES = {
 }
 # サムネイルの中心（横・縦の割合）
 THUMB = {
-    "dannoura": (0.50, 0.40), "moji_castle": (0.38, 0.45), "moji_station": (0.51, 0.43),
+    "moji_castle": (0.38, 0.45), "moji_station": (0.51, 0.43),
     "moji_port_war": (0.468, 0.55), "kanmon_bridge": (0.504, 0.47), "mojiko_retro": (0.55, 0.47),
 }
 # 巌流島の「同じ画角」の場面は、どの時代も同じ切り抜き（海峡の真ん中）にして、景色の移り変わりを見せる
@@ -89,8 +97,12 @@ def seamless(a):
 
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
+    video = {k for k, p in json.loads(AR.read_text(encoding="utf-8"))["panos"].items() if "video" in p}
     for src in sorted(RAW.glob("*.png")):
         pid = src.stem
+        if pid in video:
+            print(pid, "動画の1コマ目を使うので作らない")
+            continue
         a = np.asarray(Image.open(src).convert("RGB"), dtype=np.float64) / 255
         a = patch(a, PATCHES.get(pid, []))
         h, w, _ = a.shape

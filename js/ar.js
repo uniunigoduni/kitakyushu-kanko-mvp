@@ -1,6 +1,7 @@
 // 「ARで探検」：横長の360度画像を円筒の内側に貼り、円の真ん中に固定したカメラの向きをドラッグで変えて眺める。
 // 見どころには丸を描き、丸から線を伸ばした先に四角い枠で説明を出す（丸・線・枠はどれも3D空間に置く）。左上に「地図へ戻る」。
 // 時代ごとの場面がある史跡（巌流島）は、右の端に時代の一覧を出し、同じ向きのまま別の時代の画像に入れ替える。
+// 動画がある史跡（壇ノ浦）は、動画の1コマ目の画像で開き、動画が動き出したら入れ替える。「地図へ戻る」の下に再生と音のボタン。
 import * as THREE from 'three';
 import { Line2 } from 'three/addons/lines/Line2.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
@@ -13,9 +14,10 @@ const RAD = Math.PI / 180;
 const OPEN_MS = 180;   // 吹き出しの画像から全画面へ広げる時間（--t-move と同じ）
 const EASE = 'cubic-bezier(.22,.8,.2,1)';
 const STACK = 0.9;     // 画面の横÷縦がこれより小さい（縦長）ときは、説明の枠を丸の真上か真下に出す
-const LIFT = 34;       // 縦に出すときの、丸から枠までの線の長さ（画像の px）
-const ELBOW = 24;      // 横に出すときの、線の折れ目から枠までの長さ（画像の px）
-const NOTE_H = 70;     // 縦に出すときの枠の高さの目安（画像の px）。最初の向きを決めるのに使う
+// 線の長さなどは、横 2477px の画像の px で決めてある（大きさの違う画像・動画では K を掛けて、画面の上で同じ長さにする）
+const LIFT = 34;       // 縦に出すときの、丸から枠までの線の長さ
+const ELBOW = 24;      // 横に出すときの、線の折れ目から枠までの長さ
+const NOTE_H = 70;     // 縦に出すときの枠の高さの目安。最初の向きを決めるのに使う
 const KEY_STEP = 0.26; // 矢印キー1回で向きを変える角度（約15°）
 const ARROWS = { ArrowLeft: [1, 0], ArrowRight: [-1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] };
 const FIND_MS = 1400;  // 開いてから、まだ見ていない見どころの方向の矢印を出すまで（最初に見える見どころを描き終えてから）
@@ -35,20 +37,32 @@ const vertexShader = /* glsl */`
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     vClip = gl_Position.xyw;
   }`;
-// 画像は周辺を少し落とすだけ（時代ごとのフィルターはかけない）。時代を切り替える間は map から map2 へ混ぜていく
+// 画像は周辺を少し落とすだけ（時代ごとのフィルターはかけない）。時代を切り替える間は map から map2 へ混ぜていく。
+// 動画は一周したつなぎ目が合っていないので、右の端の uSeam（横幅の割合）を左の端に重ねてなじませる。
+// また three.js は動画の色を変換せずに渡す（速さのため）ので、ここで直す（uVideo：map・map2 が動画なら 1）
 const fragmentShader = /* glsl */`
   uniform sampler2D map;
   uniform sampler2D map2;
   uniform float uMix;
+  uniform float uSeam;
+  uniform vec2 uVideo;
   uniform vec2 uRes;
   varying vec2 vUv;
   varying vec3 vClip;
   float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  vec4 pano(sampler2D m, vec2 st, float vid) {
+    vec4 c = texture2D(m, st);
+    if (uSeam > 0.0) {
+      float t = clamp(st.x / uSeam, 0.0, 1.0);
+      c = mix(texture2D(m, vec2(st.x + 1.0 - uSeam, st.y)), c, t * t * (3.0 - 2.0 * t));
+    }
+    return vid > 0.5 ? sRGBTransferEOTF(c) : c;
+  }
   void main() {
-    // 円筒の内側から見ると左右が逆になるので、横を反転して読む
-    vec2 st = vec2(1.0 - vUv.x, vUv.y);
-    gl_FragColor = texture2D(map, st);
-    if (uMix > 0.0) gl_FragColor = mix(gl_FragColor, texture2D(map2, st), uMix);
+    // 円筒の内側から見ると左右が逆になるので、横を反転して読む（一周は、左の端に重ねた分だけ短い）
+    vec2 st = vec2((1.0 - vUv.x) * (1.0 - uSeam), vUv.y);
+    gl_FragColor = pano(map, st, uVideo.x);
+    if (uMix > 0.0) gl_FragColor = mix(gl_FragColor, pano(map2, st, uVideo.y), uMix);
     #include <colorspace_fragment>
     vec3 c = gl_FragColor.rgb;
     vec2 uv = vClip.xy / vClip.z * 0.5 + 0.5; // 画面の中の位置（左下0・右上1）
@@ -63,10 +77,22 @@ function icon(d) {
   el.append(svg('path', { d }));
   return el;
 }
+// 動画のボタンの絵
+const PLAY = 'M7 4.5l12 7.5-12 7.5v-15z', PAUSE = 'M7 5h3v14H7zM14 5h3v14h-3z';
+const SOUND = 'M11 5L6 9H2v6h4l5 4V5zM19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07', MUTED = 'M11 5L6 9H2v6h4l5 4V5zM23 9l-6 6M17 9l6 6';
 
 export function createAR(app, world, data) {
-  const [IW, IH] = data?.size ?? [2477, 1536];
-  const R = IW / (2 * Math.PI); // 画像の横幅がちょうど一周になる半径（画像の 1px = 1）
+  const SIZE = data?.size ?? [2477, 1536];
+  // 開いている画像の大きさ（動画は大きさが違うので、開くたびに measure で決める）。
+  // TW・IH：画像の横・縦（px）。IW：一周の長さ（右の端の seam を左の端に重ねるので、そのぶん短い）。
+  // R：一周がちょうど IW になる円筒の半径（画像の 1px = 1）。K：横 2477px の画像で決めた長さに掛ける割合
+  let TW, IW, IH, R, K;
+  function measure(cfg) {
+    [TW, IH] = cfg.size ?? SIZE;
+    IW = TW - (cfg.seam ?? 0);
+    R = IW / (2 * Math.PI);
+    K = IW / SIZE[0];
+  }
   const appRoot = document.getElementById('app');
   const images = new Map();
   let gl = null;   // 描画の道具。最初に開いたときに作り、閉じても使い回す
@@ -77,7 +103,8 @@ export function createAR(app, world, data) {
     const th = (1 - x / IW) * Math.PI * 2;
     return new THREE.Vector3(R * Math.sin(th), IH / 2 - y, R * Math.cos(th));
   };
-  const yawOf = (u) => (1 - u) * Math.PI * 2 + Math.PI;
+  // 画像の割合（u は横幅 TW に対する割合）→ その所を向くカメラの向き
+  const yawOf = (u) => (1 - (u * TW) / IW) * Math.PI * 2 + Math.PI;
   const pitchOf = (v) => Math.atan(((0.5 - v) * IH) / R);
 
   // 史跡を選んだときに先に読み込んでおく
@@ -110,10 +137,16 @@ export function createAR(app, world, data) {
   }
 
   function show(s, cfg, btn) {
+    measure(cfg);
     const rm = reducedMotion();
     const coarse = matchMedia('(pointer: coarse)').matches;
-    const stage = h('div', { class: 'ar-stage', tabindex: 0, role: 'img', 'aria-label': '360度の想像図。ドラッグか矢印キーで見回せます' });
+    const stage = h('div', { class: 'ar-stage', tabindex: 0, role: 'img', 'aria-label': `360度の想像図${cfg.video ? 'の動画' : ''}。ドラッグか矢印キーで見回せます` });
     const back = h('button', { class: 'ar-back', type: 'button', onclick: () => close() }, icon('M15 5l-7 7 7 7'), h('span', { text: '地図へ戻る' }));
+    // 動画：音を出して流す（できない端末では音を消して流す）。動きを減らす設定のときは、再生のボタンを押すまで止めておく
+    const video = cfg.video ? h('video', { class: 'ar-video', src: cfg.video, loop: true, playsinline: true, preload: rm ? 'metadata' : 'auto', disablepictureinpicture: true, 'aria-hidden': 'true' }) : null;
+    const playBtn = video && h('button', { class: 'ar-play', type: 'button', onclick: () => (video.paused ? play() : video.pause()) }, icon(PLAY));
+    const soundBtn = video && h('button', { class: 'ar-sound', type: 'button', onclick: () => { video.muted = !video.muted; } }, icon(SOUND));
+    const media = video && h('div', { class: 'ar-media', role: 'group', 'aria-label': '動画' }, playBtn, soundBtn);
     const scenes = s.scenes?.length > 1 ? s.scenes : null;
     let cur = scenes ? scenes.find((c) => c.pano === s.pano) ?? scenes[0] : null; // いま見ている場面（選んだ時点で切り替える）
     let shown = cur;                                          // 画像まで入れ替え終わった場面
@@ -123,13 +156,16 @@ export function createAR(app, world, data) {
     const list = h('ul', { class: 'sr-only', 'aria-label': '見どころ' });
     const shade = h('div', { class: 'ar-shade' });
     const stamp = scenes && h('p', { class: 'ar-stamp', 'aria-hidden': 'true' });
-    const el = h('div', { class: 'ar', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'ar-name' }, shade, stage, back, caption, hint, list, stamp);
+    const el = h('div', { class: 'ar', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'ar-name' }, shade, stage, back, media, caption, hint, list, stamp, video);
     const eras = scenes && erasPanel();
     if (eras) { el.append(eras.nav); markScene(); }
     document.body.append(el);
 
     const v = { yaw: 0, pitch: 0, vel: [0, 0], goal: null, tween: null, drag: null, W: 0, H: 0, f: 1, pitchMax: 0, mode: '', edge: null, finding: false, hold: 0, fade: null, own: false, dirty: true, ready: false, closed: false };
     let clone = null, grow = null, texture = null, ro = null, hintTimer = 0, findTimer = 0, aimTimer = 0, switching = 0;
+    // 閉じるときに使うものは、途中で失敗して先へ進まなかったときにも使えるように、ここで用意しておく
+    let stampAnim = null, vtex = null, vfc = 0, resume = false;
+    const rvfc = !!video && 'requestVideoFrameCallback' in video;
     const entry = { close };
     app.overlays.push(entry);
     appRoot.inert = true;
@@ -142,7 +178,7 @@ export function createAR(app, world, data) {
 
     // ---------- 円筒と見どころ ----------
     const scene = new THREE.Scene();
-    const u = { map: { value: null }, map2: { value: null }, uMix: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) } };
+    const u = { map: { value: null }, map2: { value: null }, uMix: { value: 0 }, uSeam: { value: (cfg.seam ?? 0) / TW }, uVideo: { value: new THREE.Vector2() }, uRes: { value: new THREE.Vector2(1, 1) } };
     scene.add(new THREE.Mesh(new THREE.CylinderGeometry(R, R, IH, 128, 1, true),
       new THREE.ShaderMaterial({ uniforms: u, vertexShader, fragmentShader, side: THREE.BackSide, depthWrite: false })));
 
@@ -169,7 +205,7 @@ export function createAR(app, world, data) {
         scene.add(label);
         const find = h('button', { class: 'ar-find', type: 'button', hidden: true, 'aria-label': `見どころ${i + 1}の方を向く`, title: '見どころの方を向く' }, icon('M5 12h14M13 6l6 6-6 6'));
         // side：枠を出す側（layout で決める）、ax：上下に出す枠の、線を付ける横の位置（0〜1）
-        const spot = { ...sp, mats, lines, box, label, find, center: toWorld(sp.u * IW, sp.v * IH), side: '', ax: 0.5, L: 0, ring: 0, t0: null, done: false };
+        const spot = { ...sp, mats, lines, box, label, find, center: toWorld(sp.u * TW, sp.v * IH), side: '', ax: 0.5, L: 0, ring: 0, t0: null, done: false };
         find.addEventListener('click', () => face(spot));
         return spot;
       });
@@ -185,22 +221,22 @@ export function createAR(app, world, data) {
     const vertical = (side) => side === 'u' || side === 'd';
     const homeSide = (sp) => (v.mode === 'stack' ? (sp.to[1] < 0 ? 'u' : 'd') : sp.to[0] < 0 ? 'l' : 'r');
     const lineEnd = (sp, side) => {
-      const cx = sp.u * IW, cy = sp.v * IH;
+      const cx = sp.u * TW, cy = sp.v * IH;
       return vertical(side)
-        ? [cx, cy + (side === 'u' ? -1 : 1) * (sp.r + LIFT)]
-        : [cx + (side === 'r' ? 1 : -1) * Math.max(Math.abs(sp.to[0]), sp.r + 44), cy + sp.to[1]];
+        ? [cx, cy + (side === 'u' ? -1 : 1) * (sp.r + LIFT * K)]
+        : [cx + (side === 'r' ? 1 : -1) * Math.max(Math.abs(sp.to[0]), sp.r + 44 * K), cy + sp.to[1]];
     };
     function layout() {
       for (const sp of spots) { sp.side = homeSide(sp); sp.ax = 0.5; layoutSpot(sp); }
     }
     function layoutSpot(sp) {
-      const cx = sp.u * IW, cy = sp.v * IH, r = sp.r;
+      const cx = sp.u * TW, cy = sp.v * IH, r = sp.r;
       const end = lineEnd(sp, sp.side);
       let elbow = null;
       if (vertical(sp.side)) sp.label.center.set(sp.ax, sp.side === 'u' ? 1 : 0);
       else {
         const sx = sp.side === 'r' ? 1 : -1;
-        elbow = [end[0] - sx * ELBOW, end[1]];
+        elbow = [end[0] - sx * ELBOW * K, end[1]];
         sp.label.center.set(sx > 0 ? 0 : 1, 0.5);
       }
       const aim = elbow ?? end;
@@ -237,8 +273,8 @@ export function createAR(app, world, data) {
     const overlap = (a, b) => Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])) * Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1]));
     function placeNotes(fresh) {
       const L = 8, Rt = v.W - 8, T = 8, B = v.H - 8;
-      // 「地図へ戻る」・題名・時代の一覧のつまみには重ねない（少し余白をとる）
-      const blocks = [back, caption, eras?.tab].filter(Boolean).map((b) => { const r = b.getBoundingClientRect(); return [r.left - 6, r.top - 6, r.right + 6, r.bottom + 6]; });
+      // 「地図へ戻る」・動画のボタン・題名・時代の一覧のつまみには重ねない（少し余白をとる）
+      const blocks = [back, media, caption, eras?.tab].filter(Boolean).map((b) => { const r = b.getBoundingClientRect(); return [r.left - 6, r.top - 6, r.right + 6, r.bottom + 6]; });
       // 枠の四角（画面の px）。縦に出す枠は、画面の内側に収まるように線を付ける位置（ax）を左右にずらす
       function noteRect(sp, side) {
         const w = sp.box.offsetWidth || 240, nh = sp.box.offsetHeight || 130;
@@ -253,7 +289,7 @@ export function createAR(app, world, data) {
       }
       const rings = [];
       for (const sp of spots) {
-        const cx = sp.u * IW, cy = sp.v * IH, a = screenOf(cx - sp.r, cy - sp.r), b = screenOf(cx + sp.r, cy + sp.r);
+        const cx = sp.u * TW, cy = sp.v * IH, a = screenOf(cx - sp.r, cy - sp.r), b = screenOf(cx + sp.r, cy + sp.r);
         if (a && b) rings.push({ sp, r: [Math.min(a[0], b[0]), a[1], Math.max(a[0], b[0]), b[1]] });
       }
       const fixed = spots.filter((sp) => sp.t0 != null).map((sp) => noteRect(sp, sp.side)?.r).filter(Boolean);
@@ -303,7 +339,7 @@ export function createAR(app, world, data) {
       const drawn = sp.ring * easeInOut(k1) + (sp.L - sp.ring) * (1 - (1 - k2) ** 2);
       // 引き終えたら破線をやめて、つなぎ目を丸くする
       for (const m of sp.mats) { m.dashed = k2 < 1; m.dashOffset = sp.L - drawn; }
-      if (k2 >= 1 && !sp.done) { sp.done = true; sp.box.classList.add('is-on'); }
+      if (k2 >= 1) { sp.done = true; sp.box.classList.add('is-on'); } // 動きを減らす設定では、はじめから引き終えた形
     }
 
     // 見どころの真ん中が初めて画面の内側に入ったら描き始める（同時に入ったものは少しずつずらす）
@@ -358,10 +394,10 @@ export function createAR(app, world, data) {
 
     // 見どころの丸と説明の枠がまとめて画面の真ん中に入る向き（画像の割合）
     function aimAt(sp) {
-      if (vertical(sp.side)) return [sp.u, sp.v + ((sp.side === 'u' ? -1 : 1) * (LIFT + NOTE_H)) / 2 / IH];
+      if (vertical(sp.side)) return [sp.u, sp.v + ((sp.side === 'u' ? -1 : 1) * (LIFT + NOTE_H) * K) / 2 / IH];
       // 丸の中心から枠の真ん中まで。枠の幅は 240px として、画像の px に直す
-      const reach = Math.max(Math.abs(sp.to[0]), sp.r + 44) + 120 / (v.f / R);
-      return [sp.u + ((sp.side === 'r' ? 1 : -1) * reach) / 2 / IW, sp.v + sp.to[1] / 2 / IH];
+      const reach = Math.max(Math.abs(sp.to[0]), sp.r + 44 * K) + 120 / (v.f / R);
+      return [sp.u + ((sp.side === 'r' ? 1 : -1) * reach) / 2 / TW, sp.v + sp.to[1] / 2 / IH];
     }
 
     // 方向の矢印を押したら、その見どころの方へなめらかに向きを変える（遠いほど少し長く）
@@ -412,6 +448,8 @@ export function createAR(app, world, data) {
       const hfov = 2 * Math.atan(Math.tan(fov / 2) * aspect);
       if (hfov > 90 * RAD) fov = 2 * Math.atan(1 / aspect);
       else if (hfov < 45 * RAD) fov = Math.min(80 * RAD, 2 * Math.atan(Math.tan(22.5 * RAD) / aspect));
+      // 縦に短い動画（上下 78° ほど）でも、円筒の上下の縁が画面に入らないようにする
+      fov = Math.min(fov, 2 * Math.atan(IH / 2 / R));
       camera.fov = fov / RAD;
       camera.aspect = aspect;
       camera.updateProjectionMatrix();
@@ -423,9 +461,10 @@ export function createAR(app, world, data) {
       renderer.setSize(W, H);
       css.setSize(W, H);
       renderer.getDrawingBufferSize(u.uRes.value);
-      // 方向の矢印の真ん中を置ける範囲：左右は「地図へ戻る」と題名の外側に合わせ、上はその下、下は操作の案内の下の端まで
+      // 方向の矢印の真ん中を置ける範囲：左右は「地図へ戻る」と題名の外側に合わせ、上はそれと動画のボタンの下、下は操作の案内の下の端まで
       const rb = back.getBoundingClientRect(), rc = caption.getBoundingClientRect(), rh = hint.getBoundingClientRect();
-      v.edge = { l: rb.left + 22, r: rc.right - 22, t: Math.max(rb.bottom, rc.bottom) + 8 + 22, b: rh.bottom - 22 };
+      const top = Math.max(rb.bottom, rc.bottom, media ? media.getBoundingClientRect().bottom : 0);
+      v.edge = { l: rb.left + 22, r: rc.right - 22, t: top + 8 + 22, b: rh.bottom - 22 };
       // 時代の一覧があるときは、右の端のつまみ（開いているときは一覧）にかからないようにする
       if (eras) {
         v.edge.r = Math.min(v.edge.r, W - eras.tabW() - 8 - 22);
@@ -447,21 +486,23 @@ export function createAR(app, world, data) {
     // ---------- 開く動き：吹き出しの画像を、開いたあとに同じ所が来る位置・大きさまで広げる ----------
     if (btn && !rm) {
       const r0 = btn.getBoundingClientRect();
-      const [cx, cy, cw, ch] = cfg.crop ?? [0, 0, IW, IH];
+      const [cx, cy, cw, ch] = cfg.crop ?? [0, 0, TW, IH];
       // 吹き出しの枠には、切り抜きの真ん中が枠いっぱいに入っている（はみ出しは切ってある）
       const A = r0.width / r0.height;
       const vw = Math.min(cw, ch * A), vh = vw / A;
       const vx = cx + (cw - vw) / 2, vy = cy + (ch - vh) / 2;
       const k = v.f / R; // 画面の真ん中での、画像 1px の大きさ
-      let dx = vx + vw / 2 - u0 * IW;
+      let dx = vx + vw / 2 - u0 * TW;
       dx -= Math.round(dx / IW) * IW;
       const dy = vy + vh / 2 - (IH / 2 - R * Math.tan(v.pitch));
       const w1 = vw * k, h1 = vh * k;
+      // 背景の位置（%）。画像の高さいっぱいを切り抜いたとき（動画）は動かす余地がないので真ん中
+      const pos = (a, room) => (room > 0.5 ? (a / room) * 100 : 50);
       clone = h('div', { class: 'ar-clone' });
       Object.assign(clone.style, {
         backgroundImage: `url(assets/pano/${s.pano}.jpg), url(assets/pano/${s.pano}_thumb.jpg)`,
-        backgroundSize: `${(IW / vw) * 100}% ${(IH / vh) * 100}%, cover`,
-        backgroundPosition: `${(vx / (IW - vw)) * 100}% ${(vy / (IH - vh)) * 100}%, center`,
+        backgroundSize: `${(TW / vw) * 100}% ${(IH / vh) * 100}%, cover`,
+        backgroundPosition: `${pos(vx, TW - vw)}% ${pos(vy, IH - vh)}%, center`,
       });
       el.insertBefore(clone, back);
       btn.style.visibility = 'hidden';
@@ -487,6 +528,7 @@ export function createAR(app, world, data) {
     // ---------- 描く ----------
     let last = performance.now();
     function draw(now) {
+      u.uVideo.value.set(u.map.value?.isVideoTexture ? 1 : 0, u.map2.value?.isVideoTexture ? 1 : 0);
       camera.rotation.set(v.pitch, v.yaw, 0);
       camera.updateMatrixWorld();
       if (v.ready) { trigger(now); edges(); }
@@ -530,6 +572,8 @@ export function createAR(app, world, data) {
         v.dirty = true;
       }
       for (const sp of spots) if (sp.t0 != null && !sp.done) { paint(sp, now); v.dirty = true; }
+      // 動画のコマが届いたことを知らせる仕組みがないブラウザでは、流している間は毎回描く
+      if (video && !rvfc && !video.paused && video.readyState >= video.HAVE_CURRENT_DATA) { useVideo(); v.dirty = true; }
       if (!v.dirty) return;
       v.dirty = false;
       draw(now);
@@ -584,6 +628,52 @@ export function createAR(app, world, data) {
       v.dirty = true;
       hideHint();
     });
+
+    // ---------- 動画：1コマ目の画像で開いておき、画面ができてから動画のコマが届いたら動画に入れ替える ----------
+    // 再生は「ARで探検」を押した流れの中で始める（あとからだと、音を出して流せない端末がある）
+    function play() {
+      video.play()?.catch((err) => {
+        if (err.name === 'NotAllowedError' && !video.muted && !v.closed) { video.muted = true; play(); }
+      });
+    }
+    // 新しいコマが届くたびに描き直す（止めている間は描かない）
+    function onFrame() {
+      vfc = video.requestVideoFrameCallback(onFrame);
+      useVideo();
+      v.dirty = true;
+    }
+    function useVideo() {
+      if (vtex || !v.ready || v.closed) return;
+      vtex = new THREE.VideoTexture(video);
+      vtex.colorSpace = THREE.SRGBColorSpace;
+      vtex.wrapS = THREE.RepeatWrapping;
+      vtex.needsUpdate = true; // いま出ているコマをすぐ貼る（止めているときは、次のコマを待っても来ない）
+      if (v.fade) endFade();
+      if (rm) { texture?.dispose(); texture = vtex; u.map.value = vtex; }
+      else { u.map2.value = vtex; u.uMix.value = 0; v.fade = { t0: performance.now(), next: vtex }; }
+      v.dirty = true;
+    }
+    const setButton = (b, d, label) => { b.querySelector('path').setAttribute('d', d); b.setAttribute('aria-label', label); b.title = label; };
+    function showMedia() {
+      setButton(playBtn, video.paused ? PLAY : PAUSE, video.paused ? '動画を再生する' : '動画を止める');
+      setButton(soundBtn, video.muted ? MUTED : SOUND, video.muted ? '音を出す' : '音を消す');
+      // 読み込みを待っている間は、再生のボタンを点滅させる
+      media.classList.toggle('is-waiting', !video.paused && video.readyState < video.HAVE_FUTURE_DATA);
+    }
+    // ほかのタブやアプリに移ったら止め、戻ったら続ける
+    function onVisible() {
+      if (document.hidden) { if (!video.paused) { resume = true; video.pause(); } }
+      else if (resume) { resume = false; play(); }
+    }
+    if (video) {
+      for (const t of ['play', 'pause', 'playing', 'waiting', 'canplay', 'volumechange']) video.addEventListener(t, showMedia);
+      // 動画を読めないときは、1コマ目の画像のままにしてボタンを隠す
+      video.addEventListener('error', () => { if (v.closed) return; console.error(video.error); video.pause(); media.hidden = true; fit(); });
+      document.addEventListener('visibilitychange', onVisible);
+      if (rvfc) vfc = video.requestVideoFrameCallback(onFrame);
+      showMedia();
+      if (!rm) play();
+    }
 
     // ---------- 画像がそろったら、広げた画像から本物の画面に切り替える ----------
     (async () => {
@@ -684,7 +774,6 @@ export function createAR(app, world, data) {
       eras.mark(cur);
     }
     // 切り替えた時代の名前を、画面の真ん中に少しの間だけ出す
-    let stampAnim = null;
     function showStamp(c) {
       stamp.replaceChildren(h('span', { text: c.year }), h('b', { text: c.name }));
       stampAnim?.cancel();
@@ -796,6 +885,8 @@ export function createAR(app, world, data) {
     function fail(message) {
       clone?.remove();
       clone = null;
+      video?.pause();
+      if (media) media.hidden = true;
       stage.hidden = true;
       hint.hidden = true;
       el.insertBefore(h('p', { class: 'ar-error', role: 'alert', text: message }), back);
@@ -806,6 +897,7 @@ export function createAR(app, world, data) {
     function close() {
       if (v.closed) return;
       v.closed = true;
+      video?.pause();
       clearTimeout(hintTimer);
       clearTimeout(findTimer);
       clearTimeout(aimTimer);
@@ -826,6 +918,13 @@ export function createAR(app, world, data) {
           css.domElement.replaceChildren();
         }
         ro?.disconnect();
+        // 動画の読み込みも止める
+        if (video) {
+          document.removeEventListener('visibilitychange', onVisible);
+          if (vfc) video.cancelVideoFrameCallback(vfc);
+          video.removeAttribute('src');
+          video.load();
+        }
         el.remove();
         view = null;
       };

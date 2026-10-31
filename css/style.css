@@ -701,6 +701,25 @@ body.is-intro #timeline, body.is-intro #band, body.is-intro .map-canvas { pointe
 .ar-clone { position: absolute; background-repeat: no-repeat; background-color: #111; pointer-events: none; }
 .ar-error { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; padding: 24px; text-align: center; line-height: 2; color: var(--text); }
 @keyframes ar-in { from { opacity: 0; } }
+/* 動画のある史跡（壇ノ浦）：「地図へ戻る」の下の、再生と音のボタン。動画そのものは見えない所に置き、円筒に貼って見せる */
+.ar-video { position: absolute; left: 0; top: 0; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
+.ar-media {
+  position: absolute; left: max(14px, env(safe-area-inset-left)); top: calc(max(14px, env(safe-area-inset-top)) + 52px);
+  display: flex; gap: 6px;
+  animation: ar-in 180ms ease both;
+}
+.ar-media button {
+  display: grid; place-items: center;
+  width: 44px; height: 44px;
+  background: rgba(0, 0, 0, .55); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, .18); border-radius: var(--radius);
+  transition: background-color var(--t-hover);
+}
+.ar-media button:hover { background: rgba(40, 40, 40, .7); }
+.ar-media svg { width: 20px; height: 20px; }
+.ar-media.is-waiting .ar-play svg { animation: ar-wait 1s ease-in-out infinite alternate; }
+@keyframes ar-wait { to { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { .ar-media.is-waiting .ar-play svg { animation: none; opacity: .45; } }
 /* 時代ごとの場面がある史跡（巌流島）：題名の下の場面の名前、切り替えたときに真ん中に出す名前、右の端の時代の一覧 */
 .ar-caption .ar-scene { font-size: 13px; font-weight: 700; color: var(--strong); }
 .ar-stamp {
