@@ -152,13 +152,14 @@ export async function createWorld(container, geo) {
   // ---------- カメラ操作 ----------
   const controls = new CameraControls(camera, renderer.domElement);
   const A = CameraControls.ACTION;
+  // 回せると操作が複雑になるので、向きは変えさせない。どのボタンのドラッグも移動、2本指は拡大・縮小と移動
   controls.mouseButtons.left = A.SCREEN_PAN;
-  controls.mouseButtons.right = A.ROTATE;
-  controls.mouseButtons.middle = A.ROTATE;
+  controls.mouseButtons.right = A.SCREEN_PAN;
+  controls.mouseButtons.middle = A.SCREEN_PAN;
   controls.mouseButtons.wheel = A.DOLLY;
   controls.touches.one = A.TOUCH_SCREEN_PAN;
-  controls.touches.two = A.TOUCH_DOLLY_ROTATE;
-  controls.touches.three = A.TOUCH_DOLLY_ROTATE;
+  controls.touches.two = A.TOUCH_DOLLY_SCREEN_PAN;
+  controls.touches.three = A.TOUCH_DOLLY_SCREEN_PAN;
   controls.dollyToCursor = true;
   controls.smoothTime = 0.25;
   controls.draggingSmoothTime = 0.1;
