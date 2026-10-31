@@ -21,8 +21,8 @@ PATCHES = {
 }
 # サムネイルの中心（横・縦の割合）
 THUMB = {
-    "dannoura": (0.50, 0.40), "moji_castle": (0.38, 0.45), "moji_station": (0.62, 0.35),
-    "moji_port_war": (0.45, 0.55), "kanmon_bridge": (0.60, 0.45), "mojiko_retro": (0.55, 0.47),
+    "dannoura": (0.50, 0.40), "moji_castle": (0.38, 0.45), "moji_station": (0.51, 0.43),
+    "moji_port_war": (0.468, 0.55), "kanmon_bridge": (0.504, 0.47), "mojiko_retro": (0.55, 0.47),
 }
 
 
