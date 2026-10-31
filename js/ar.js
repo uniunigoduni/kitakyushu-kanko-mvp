@@ -29,41 +29,22 @@ const vertexShader = /* glsl */`
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     vClip = gl_Position.xyw;
   }`;
-// 地図の白黒の時代（js/map/grade.js）と同じフィルムの傷み。film のない画像は周辺を少し落とすだけ
+// 画像は周辺を少し落とすだけ（時代ごとのフィルターはかけない）
 const fragmentShader = /* glsl */`
   uniform sampler2D map;
   uniform vec2 uRes;
-  uniform float uFilm, uFlicker, uFrame;
-  uniform vec4 uScratch;
   varying vec2 vUv;
   varying vec3 vClip;
   float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-  float vnoise(vec2 p) {
-    vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
-    return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y);
-  }
   void main() {
     // 円筒の内側から見ると左右が逆になるので、横を反転して読む
     gl_FragColor = texture2D(map, vec2(1.0 - vUv.x, vUv.y));
     #include <colorspace_fragment>
     vec3 c = gl_FragColor.rgb;
     vec2 uv = vClip.xy / vClip.z * 0.5 + 0.5; // 画面の中の位置（左下0・右上1）
-    vec2 px = uv * uRes;
-    if (uFilm > 0.5) {
-      c *= uFlicker;
-      c += (hash(floor(px / 1.5) + uFrame * 7.13) - 0.5) * 0.07;
-      for (int i = 0; i < 3; i++) {
-        float sx = uScratch[i];
-        if (sx >= 0.0) {
-          float d = abs(uv.x - sx) * uRes.x;
-          float a = exp(-d * d / 1.2) * smoothstep(0.3, 0.75, vnoise(vec2(sx * 40.0, uv.y * 7.0 + uFrame)));
-          c = mix(c, vec3(0.94, 0.92, 0.86), a * uScratch.w);
-        }
-      }
-    }
     vec2 q = uv - 0.5;
-    c *= clamp(1.0 - dot(q, q) * mix(0.55, 1.45, uFilm), 0.0, 1.0);
-    c += (hash(px + fract(uFrame * 0.618) * 17.0) - 0.5) / 255.0;
+    c *= clamp(1.0 - dot(q, q) * 0.55, 0.0, 1.0);
+    c += (hash(uv * uRes) - 0.5) / 255.0;
     gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
   }`;
 
@@ -145,11 +126,7 @@ export function createAR(app, world, data) {
 
     // ---------- 円筒と見どころ ----------
     const scene = new THREE.Scene();
-    const u = {
-      map: { value: null }, uRes: { value: new THREE.Vector2(1, 1) },
-      uFilm: { value: cfg.film ? 1 : 0 }, uFlicker: { value: 1 }, uFrame: { value: 0 },
-      uScratch: { value: new THREE.Vector4(-1, -1, -1, 0) },
-    };
+    const u = { map: { value: null }, uRes: { value: new THREE.Vector2(1, 1) } };
     scene.add(new THREE.Mesh(new THREE.CylinderGeometry(R, R, IH, 128, 1, true),
       new THREE.ShaderMaterial({ uniforms: u, vertexShader, fragmentShader, side: THREE.BackSide, depthWrite: false })));
 
@@ -368,7 +345,7 @@ export function createAR(app, world, data) {
     }
 
     // ---------- 描く ----------
-    let last = performance.now(), filmT = 0, scratchT = 0;
+    let last = performance.now();
     function draw(now) {
       camera.rotation.set(v.pitch, v.yaw, 0);
       camera.updateMatrixWorld();
@@ -404,21 +381,6 @@ export function createAR(app, world, data) {
         v.pitch += (v.goal[1] - v.pitch) * k;
         if (Math.abs(v.goal[0] - v.yaw) + Math.abs(v.goal[1] - v.pitch) < 1e-3) { [v.yaw, v.pitch] = v.goal; v.goal = null; }
         v.dirty = true;
-      }
-      // フィルムは 1 秒 24 コマ、縦傷は 0.4 秒ごとに出し直す
-      if (cfg.film) {
-        filmT += dt; scratchT += dt;
-        if (filmT >= 1 / 24) {
-          filmT %= 1 / 24;
-          u.uFrame.value = (u.uFrame.value + 1) % 4096;
-          u.uFlicker.value = 1 + (Math.random() - 0.5) * 0.07;
-          v.dirty = true;
-        }
-        if (scratchT > 0.4) {
-          scratchT = 0;
-          const sc = u.uScratch.value;
-          sc.set(...[0, 1, 2].map(() => (Math.random() < 0.25 ? 0.05 + Math.random() * 0.9 : -1)), 0.25 + Math.random() * 0.25);
-        }
       }
       for (const sp of spots) if (sp.t0 != null && !sp.done) { paint(sp, now); v.dirty = true; }
       if (!v.dirty) return;
