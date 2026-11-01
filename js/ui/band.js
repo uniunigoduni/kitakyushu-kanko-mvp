@@ -1,12 +1,22 @@
 // 下の史跡帯：左が縄文、右が現代。スライダーに合わせて横に流れ、いまの時代の史跡を真ん中に寄せる。
 // 史跡を選んだら（カード・ピン・年表・吹き出しの前後の番号・リンクのどれからでも）、そのカードを滑らかに真ん中へ寄せ、
 // 年を手で動かすか帯を手で流すまでそこに置く。
-// 現代の欄の終わりには、現代の地図に載せた観光地を番号の順に並べる
+// 現代の欄の終わりには、現代の地図に載せた観光地を、観光モデルルートの説明のカードに続けて番号の順に並べる
 import { ERAS, yearToT } from '../eras.js';
-import { clamp, easeInOut, h, historicalName, reducedMotion } from '../util.js';
+import { clamp, easeInOut, h, historicalName, reducedMotion, svg } from '../util.js';
 
 // 「1914年（大正3年）2月」→「1914年」のように、括弧の中を落とした短い年
 export const shortYear = (label) => label.replace(/（[^）]*）/g, '').replace(/\s+/g, '');
+
+// 観光モデルルートの印：出発と到着の点を、曲がった点線でつなぐ
+function routeIcon() {
+  const icon = svg('svg', { class: 'br-icon', viewBox: '0 0 26 26', 'aria-hidden': 'true' });
+  icon.append(
+    svg('path', { d: 'M6 20.5C6 13 20 13.5 20 6', fill: 'none', 'stroke-dasharray': '2.6 2.4' }),
+    svg('circle', { cx: 6, cy: 20.5, r: 3.2 }),
+    svg('circle', { cx: 20, cy: 5.5, r: 3.2 }));
+  return icon;
+}
 
 export function createBand(app, sites) {
   const scroller = document.querySelector('#band .band-scroll');
@@ -16,6 +26,7 @@ export function createBand(app, sites) {
   const anchors = []; // スライダーの位置 t と、帯の上の x の対応（t の小さい順）
   // hold：選んだ史跡。選んだあとに年が動いても（その史跡の年へ移る・特別な場面の年へ合わせる）、帯はそのカードから動かさない
   let hold = null, centerAnimation = null;
+  let route = null; // 観光モデルルートの説明のカード（その時代の欄）
 
   const byEra = new Map(ERAS.map((e) => [e.id, []]));
   // どの時代にも出る史跡（巌流島）は bandEra の時代の欄に置く
@@ -31,6 +42,21 @@ export function createBand(app, sites) {
     const pad = (e.t1 - e.t0) * 0.12;
     let prevT = e.t0, spots = 0;
     for (const s of group) {
+      // 観光地の前に、番号の順が観光モデルルートだと分かる説明のカード。最初の画面（今の年）ではこれを真ん中に置き、押すと 1 番を開く
+      if (s.spot && !spots++) {
+        const total = group.filter((x) => x.spot).length;
+        const btn = h('button', { class: 'band-card band-route', type: 'button', 'aria-label': `観光モデルルート。${s.name}から和布刈まで、番号の順にめぐる${total}か所の一例。押すと1番を開きます`, onclick: () => app.selectSite(s.id) },
+          routeIcon(),
+          h('span', { class: 'bc-text' },
+            h('span', { class: 'bc-year', text: '観光モデルルート' }),
+            h('span', { class: 'bc-name', text: `${s.name}から和布刈まで${total}か所` }),
+            h('span', { class: 'bc-meta', text: '番号の順にめぐる一例' })));
+        const li = h('li', {}, btn);
+        list.append(li);
+        route = { btn, era: e };
+        prevT = Math.max(prevT + 1e-4, app.tNow);
+        anchors.push({ t: prevT, el: li, at: 'center' });
+      }
       const thumb = s.pano && h('img', { class: 'bc-thumb', src: `assets/pano/${s.pano}_thumb.jpg`, alt: '', loading: 'lazy', decoding: 'async' });
       // 観光地のカードは、ピンと同じ番号・種類・行き方
       const btn = s.spot
@@ -49,9 +75,9 @@ export function createBand(app, sites) {
       const li = h('li', {}, btn);
       list.append(li);
       cards.set(s.id, { s, btn, li, thumb, era: e });
-      // 観光地は今年の場所なので、1 番目を「今」（最初の画面の年）に合わせて真ん中に置き、2 番目からは帯の終わりまでの間に流す
-      if (s.spot && spots++) continue;
-      const t = Math.max(prevT + 1e-4, s.spot ? app.tNow : Math.min(Math.max(yearToT(s.year), e.t0 + pad), e.t1 - pad));
+      // 観光地は今年の場所なので、年の位置は持たず、説明のカードから帯の終わりまでの間に流す
+      if (s.spot) continue;
+      const t = Math.max(prevT + 1e-4, Math.min(Math.max(yearToT(s.year), e.t0 + pad), e.t1 - pad));
       prevT = t;
       anchors.push({ t, el: li, at: 'center' });
     }
@@ -132,6 +158,7 @@ export function createBand(app, sites) {
     if (prev) eraEls.get(prev.id)?.classList.remove('is-now');
     eraEls.get(era.id)?.classList.add('is-now');
     for (const c of cards.values()) c.btn.classList.toggle('is-now', c.s.eras.includes(era.id));
+    route?.btn.classList.toggle('is-now', route.era === era);
   });
   app.on('select', (s) => { for (const c of cards.values()) c.btn.classList.toggle('is-selected', c.s === s); });
   app.on('scene', (s) => { const c = cards.get(s.id); if (c?.thumb) c.thumb.src = `assets/pano/${s.pano}_thumb.jpg`; });

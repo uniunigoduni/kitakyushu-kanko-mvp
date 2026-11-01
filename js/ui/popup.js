@@ -56,6 +56,8 @@ export function createPopup(app, world, pins) {
         h('div', { class: 'spot-head' },
           h('span', { class: 'spot-tile', 'aria-hidden': 'true', text: String(s.n) }),
           h('div', { class: 'spot-title' },
+            // 番号は観光モデルルートの順（下の帯の先頭に説明のカード）
+            h('p', { class: 'spot-route' }, '観光モデルルート', h('span', { class: 'spot-route-n', text: `${s.n}／${route.length}` })),
             h('p', { class: 'spot-meta' }, [s.kind, s.access].filter(Boolean).flatMap((t, i) => [i ? ' · ' : null, h('span', { class: 'spot-meta-part', text: t })])),
             h('h2', { class: 'spot-name', id: 'popup-name', text: s.name }))),
         s.summary ? h('p', { class: 'popup-summary', text: s.summary }) : null,

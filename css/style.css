@@ -376,7 +376,8 @@ button.dt-item { width: 100%; text-align: left; }
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   word-break: auto-phrase; text-wrap: balance; /* 「門司」と「区」のように言葉の途中で折り返さない */
 }
-.band-card .bc-meta { margin-top: auto; font-size: 11px; color: var(--muted); }
+/* 下の行は 1 行だけ（長い行き方は「…」で切り、全文は吹き出しで） */
+.band-card .bc-meta { margin-top: auto; font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .band-card .bc-thumb { width: 64px; height: 100%; border-radius: var(--radius); object-fit: cover; background: #111; }
 .band-empty { align-self: center; padding: 0 20px; color: var(--muted); font-size: 12.5px; }
 
@@ -1229,6 +1230,10 @@ body.is-stage .map-pins, body.is-stage .arrow-layer { opacity: 0; visibility: hi
 .band-card.is-spot { grid-template-columns: auto minmax(0, 1fr); align-items: start; }
 .bc-num { width: 26px; height: 26px; margin-top: 1px; font-size: 13px; }
 .band-card.is-spot.is-selected .bc-num { background: var(--strong); }
+/* 観光地の前の、観光モデルルートの説明のカード（道の印と、出発・到着・順番） */
+.band-route { grid-template-columns: auto minmax(0, 1fr); align-items: start; }
+.br-icon { width: 26px; height: 26px; margin-top: 1px; fill: var(--era-accent); stroke: var(--era-accent); stroke-width: 1.6; stroke-linecap: round; }
+.band-route .bc-year { font: 700 11px/1.4 var(--sans); letter-spacing: .1em; }
 .pin.is-spot { --head: 24px; --stem: 14px; }
 .pin.is-spot .pin-head, .popup-route .pin-head {
   display: grid; place-items: center;
@@ -1244,6 +1249,8 @@ body.is-stage .map-pins, body.is-stage .arrow-layer { opacity: 0; visibility: hi
 .spot-head { display: flex; align-items: center; gap: 12px; }
 .spot-tile { width: 44px; height: 44px; font-size: 19px; }
 .spot-title { min-width: 0; }
+.spot-route { margin: 0 0 1px; padding-right: 32px; font-size: 11.5px; line-height: 1.5; font-weight: 700; letter-spacing: .1em; color: var(--era-accent); }
+.spot-route-n { margin-left: .6em; font: 500 12px/1 var(--mono); font-feature-settings: 'tnum'; letter-spacing: 0; }
 .spot-meta { margin: 0; padding-right: 32px; font-size: 12px; line-height: 1.6; color: var(--muted); }
 .spot-meta-part { white-space: nowrap; }
 .spot-name { margin: 1px 0 0; padding-right: 32px; font-size: 17px; line-height: 1.4; font-weight: 700; color: var(--strong); letter-spacing: .03em; word-break: auto-phrase; text-wrap: balance; } /* 閉じるボタンの下に入らないように */
@@ -1294,6 +1301,9 @@ body.is-stage .map-pins, body.is-stage .arrow-layer { opacity: 0; visibility: hi
   .map-credit { left: 8px; bottom: 5px; max-width: calc(100% - 64px); font-size: 9px; }
   .map-credit span { display: block; white-space: nowrap; }
   #band { --band-card-w: 176px; }
+  /* 名前 2 行と下の 1 行がカードの枠に収まるよう、帯とカードの余白を詰める */
+  .band-scroll { padding: 10px 0 8px; }
+  .band-card { gap: 8px; padding: 8px 9px 8px 11px; }
   .band-card .bc-thumb { width: 52px; }
   .popup { width: min(320px, calc(100% - 16px)); }
   .popup.is-spot { width: min(320px, calc(100% - 16px)); padding-bottom: 52px; }
