@@ -219,6 +219,7 @@ function start(world, sites, arData) {
     }
     app.selected = s;
     app.emit('select', s);
+    if (from === 'travel') pins.pop(s.id);
     // 特別な場面のある史跡は、場面がカメラを動かす（読み込めなかったときは、いつもの吹き出し）
     if (stage.has(s)) {
       if (!(await stage.enter(s, base)) && app.selected === s) { popup.open(s); world.view(viewFor(s, dist, base)); }

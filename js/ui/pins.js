@@ -131,6 +131,21 @@ export function createPins(app, world, sites) {
   // ---------- 時代 ----------
   const fadeIn = new Set();
   let dirty = true, needMeasure = true;
+  let travelPin = null;
+  const pointers = new Map();
+  let pinchDistance = null;
+  // 現代と当時を行き来した直後は、行き先をほかのピンより優先する。
+  function clearTravelPin() {
+    if (!travelPin) return;
+    const p = travelPin;
+    travelPin = null;
+    pointers.clear();
+    pinchDistance = null;
+    p.el.classList.remove('is-travel-priority');
+    p.obj.renderOrder = p.s === app.selected ? 20 : 10 - p.tier;
+    dirty = true;
+    world.wake();
+  }
   function setEra(era) {
     for (const p of pins.values()) turn(p, era);
     needMeasure = true;
@@ -224,12 +239,12 @@ export function createPins(app, world, sites) {
     const r = world.distance() / world.home.distance;
     lastR = r;
     const sel = app.selected;
-    const rank = (p) => (p.s === sel ? -2 : p === A.pin ? -1 : p.tier);
+    const rank = (p) => (p.s === sel ? -3 : p === travelPin ? -2 : p === A.pin ? -1 : p.tier);
     const list = [...pins.values()].filter((p) => p.on).sort((a, b) => rank(a) - rank(b) || a.n - b.n);
     // 出ていたかどうかは、並べ始める前の状態で見る（並べ直しても、ちらつきを防ぐ余白が変わらないように）
     for (const p of list) {
       p.was = p.state; p.wasLeft = p.left; p.skip = false;
-      p.forced = p.s === sel || (p === A.pin && !sel) || !!p.s.scenes;
+      p.forced = p.s === sel || p === travelPin || (p === A.pin && !sel) || !!p.s.scenes;
     }
     // 必ず出すピンの名前に押しのけられたピンは、外してから並べ直す（押しのけられたピンのせいで、
     // まわりのピン（広告どうしの間など）まで出ないままにならないように）
@@ -283,7 +298,7 @@ export function createPins(app, world, sites) {
     // （写真の枠は写真で見分けがつく）
     const free = (left) => { const b = nameRect(p, p.q, left, [0, 0, 0, 0]); return !outside(b) && !hits(b, PAD_KEEP, p, (q) => q.forced); };
     const left = free(false) ? false : free(true) ? true : null;
-    if (left === null && p.s !== app.selected) { setState(p, 'dot'); return; }
+    if (left === null && p.s !== app.selected && p !== travelPin) { setState(p, 'dot'); return; }
     const nr = nameRect(p, p.q, !!left, [0, 0, 0, 0]);
     evict(nr, p);
     setSide(p, !!left);
@@ -453,24 +468,29 @@ export function createPins(app, world, sites) {
   };
   app.on('era', (era, prev) => {
     setEra(era);
+    if (travelPin && !travelPin.on) clearTravelPin();
     resetArrow();
     A.pin = featuredOf();
     // 題字と同じく地名・ピンの書体も変わるので、大きさを測り直す
     if (prev?.font !== era.font) remeasure();
   });
   app.on('t', () => schedule(600)); // 時代が決まって 0.6 秒たったら引く
+  app.on('choose', (s) => {
+    const id = app.era?.id === 'now' ? merged.get(s.id) ?? s.id : s.id;
+    if (travelPin && travelPin.s.id !== id) clearTravelPin();
+  });
   app.on('scene', (s) => { const p = pins.get(s.id); if (p?.img) setFrame(p, s.pano); });
   app.on('select', (s) => {
     for (const p of pins.values()) {
       const on = p.s === s;
       p.el.classList.toggle('is-selected', on);
-      p.obj.renderOrder = on ? 20 : 10 - p.tier;
+      p.obj.renderOrder = on ? 20 : p === travelPin ? 19 : 10 - p.tier;
     }
     layer.classList.add('is-hidden');
     dirty = true;
   });
   app.on('deselect', () => {
-    for (const p of pins.values()) { p.el.classList.remove('is-selected'); p.obj.renderOrder = 10 - p.tier; }
+    for (const p of pins.values()) { p.el.classList.remove('is-selected'); p.obj.renderOrder = p === travelPin ? 19 : 10 - p.tier; }
     layer.classList.remove('is-hidden');
     if (A.pending) { A.pending = false; schedule(300); }
     dirty = true;
@@ -504,14 +524,52 @@ export function createPins(app, world, sites) {
   // ピンが画面の外で引けなかったときは、地図が止まったところでもう一度
   world.controls.addEventListener('rest', () => { dirty = true; schedule(300); });
 
+  // 小さなクリックや慣性で消さず、利用者の大きな地図操作・スクロールで通常の優先順位へ戻す。
+  const pinchSize = () => {
+    const [a, b] = [...pointers.values()];
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  };
+  world.renderer.domElement.addEventListener('pointerdown', (e) => {
+    if (!travelPin) return;
+    pointers.set(e.pointerId, { x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY });
+    if (pointers.size === 2) pinchDistance = pinchSize();
+  });
+  addEventListener('pointermove', (e) => {
+    const p = pointers.get(e.pointerId);
+    if (!p) return;
+    p.x = e.clientX; p.y = e.clientY;
+    if (Math.hypot(p.x - p.x0, p.y - p.y0) > 30 ||
+        (pinchDistance !== null && pointers.size >= 2 && Math.abs(pinchSize() - pinchDistance) > 14)) {
+      pointers.clear(); pinchDistance = null; clearTravelPin();
+    }
+  });
+  const endPointer = (e) => { pointers.delete(e.pointerId); if (pointers.size < 2) pinchDistance = null; };
+  addEventListener('pointerup', endPointer);
+  addEventListener('pointercancel', endPointer);
+  addEventListener('wheel', clearTravelPin, { capture: true, passive: true });
+  map.addEventListener('click', (e) => {
+    const button = e.target.closest('.map-zoom button');
+    if (button && button.getAttribute('aria-disabled') !== 'true') clearTravelPin();
+  });
+
   return {
     pins,
     // 冒頭の流しの間は矢印を止め、終わってから delay ミリ秒後に引く
     holdArrow() { A.hold = true; clearTimeout(A.timer); },
     releaseArrow(delay = 1000) { A.hold = false; schedule(delay); },
     position: (id) => pins.get(id)?.obj.position,
-    // 現代へ戻ったとき、いまの場所のピンを弾ませる（観光地にまとめた史跡は、観光地のピン）
-    pop(id) { const p = pins.get(merged.get(id) ?? id); if (p) pop(p); },
+    // 行き先を優先して弾ませる（現代に観光地としてまとめた史跡は、その観光地のピン）
+    pop(id) {
+      const p = pins.get(app.era?.id === 'now' ? merged.get(id) ?? id : id);
+      if (!p?.on) return;
+      clearTravelPin();
+      travelPin = p;
+      p.el.classList.add('is-travel-priority');
+      p.obj.renderOrder = p.s === app.selected ? 20 : 19;
+      dirty = true;
+      world.wake();
+      pop(p);
+    },
     // 中身や出す時代を変えたピンを描き直す（自分の広告の見本の店名・業種）
     refresh(id) {
       const p = pins.get(id);
