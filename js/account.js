@@ -8,6 +8,8 @@ const WAIT_MS = 900; // 「登録しています」を見せる時間
 const EASE = 'cubic-bezier(.22,.8,.2,1)';
 const MAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SHOP_KINDS = ['飲食店', 'カフェ・甘味', 'おみやげ・物販', '体験・レンタル', '宿泊', 'そのほか'];
+// 地点（お店の広告のピン）の登録をすぐ実演できるよう、欄に最初から入れておくダミー
+const DEMO = { name: 'hogehoge', email: 'hogehoge@example.com', pass: 'hogehoge', kind: SHOP_KINDS[0] };
 
 const PERSON = 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.5 20.5a7.5 7.5 0 0 1 15 0';
 const CHECK = 'M5 12.5l4.5 4.5L19 7.5';
@@ -51,8 +53,8 @@ export function createAccount(app, world) {
   let view = null, menu = null;
   app.user = null; // { type: 'traveler' | 'shop', name, email, kind }。ページを開いている間だけ
 
-  // ---------- 右上のボタン ----------
-  const btn = h('button', { class: 'acct-btn', type: 'button', onclick: () => (app.user ? toggleMenu() : open('traveler')) });
+  // ---------- 右上のボタン（地点の登録の実演用に、お店の登録から開く） ----------
+  const btn = h('button', { class: 'acct-btn', type: 'button', onclick: () => (app.user ? toggleMenu() : open('shop')) });
   title.append(btn);
   function renderBtn() {
     const u = app.user;
@@ -208,6 +210,13 @@ export function createAccount(app, world) {
       const agree = { input: agreeBox, err: h('p', { class: 'acct-err', id: 'acct-agree-err', hidden: true }) };
       agree.wrap = h('div', { class: 'acct-field' },
         h('label', { class: 'acct-check', for: 'acct-agree' }, agreeBox, h('span', { text: '利用規約とプライバシーポリシーに同意する' })), agree.err);
+      // ダミーを入れておき、「登録する」を押すだけで地図にピンが出るところまで見せられるようにする
+      nick.input.value = shop.input.value = DEMO.name;
+      kindSel.value = DEMO.kind;
+      kindSel.classList.remove('is-empty');
+      mail.input.value = DEMO.email;
+      pass.input.value = DEMO.pass;
+      agreeBox.checked = true;
 
       const submit = h('button', { class: 'btn-primary', type: 'submit', text: '登録する' });
       const form = h('form', { class: 'acct-form', id: 'acct-form', role: 'tabpanel', novalidate: true, autocomplete: 'off' },
@@ -265,6 +274,8 @@ export function createAccount(app, world) {
       const [t, headEl] = head('ログイン');
       const mail = field('acct-mail', 'メールアドレス', { type: 'email', inputmode: 'email', placeholder: '例：moji@example.com' });
       const pass = field('acct-pass', 'パスワード', { type: 'password', autocomplete: 'current-password' });
+      mail.input.value = DEMO.email;
+      pass.input.value = DEMO.pass;
       const submit = h('button', { class: 'btn-primary', type: 'submit', text: 'ログインする' });
       const form = h('form', { class: 'acct-form', novalidate: true, autocomplete: 'off' }, mail.wrap, pass.wrap, submit);
       const rules = [
