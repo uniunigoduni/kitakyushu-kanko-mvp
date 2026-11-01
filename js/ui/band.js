@@ -1,7 +1,7 @@
 // 下の史跡帯：左が縄文、右が現代。スライダーに合わせて横に流れ、いまの時代の史跡を真ん中に寄せる。
 // 現代の欄の終わりには、現代の地図に載せた観光地を番号の順に並べる
 import { ERAS, yearToT } from '../eras.js';
-import { h } from '../util.js';
+import { clamp, easeInOut, h, reducedMotion } from '../util.js';
 
 // 「1914年（大正3年）2月」→「1914年」のように、括弧の中を落とした短い年
 export const shortYear = (label) => label.replace(/（[^）]*）/g, '').replace(/\s+/g, '');
@@ -12,7 +12,7 @@ export function createBand(app, sites) {
   const cards = new Map();
   const eraEls = new Map();
   const anchors = []; // スライダーの位置 t と、帯の上の x の対応（t の小さい順）
-  let pendingCard = null;
+  let pendingCard = null, centerAnimation = null;
 
   const byEra = new Map(ERAS.map((e) => [e.id, []]));
   // どの時代にも出る史跡（巌流島）は bandEra の時代の欄に置く
@@ -74,14 +74,35 @@ export function createBand(app, sites) {
     }
     return xs[xs.length - 1];
   }
-  function centerCard(s) {
+  function cardPosition(s) {
     const btn = cards.get(s.id)?.btn;
-    if (!btn) return;
+    if (!btn) return scroller.scrollLeft;
     const cardRect = btn.getBoundingClientRect(), viewRect = scroller.getBoundingClientRect();
-    scroller.scrollLeft += cardRect.left + cardRect.width / 2 - (viewRect.left + viewRect.width / 2);
+    return clamp(scroller.scrollLeft + cardRect.left + cardRect.width / 2 - (viewRect.left + viewRect.width / 2), 0, Math.max(0, scroller.scrollWidth - scroller.clientWidth));
+  }
+  function stopCenter() {
+    if (!centerAnimation) return;
+    cancelAnimationFrame(centerAnimation.raf);
+    centerAnimation = null;
+  }
+  function centerCard(s) {
+    stopCenter();
+    const from = scroller.scrollLeft, to = cardPosition(s);
+    if (reducedMotion() || Math.abs(to - from) < 1) { scroller.scrollLeft = to; return; }
+    const ms = clamp(Math.abs(to - from) / scroller.clientWidth * 700, 280, 720);
+    const animation = { site: s, raf: 0 }, start = performance.now();
+    centerAnimation = animation;
+    const step = (now) => {
+      if (centerAnimation !== animation) return;
+      const k = Math.min(1, (now - start) / ms);
+      scroller.scrollLeft = from + (cardPosition(s) - from) * easeInOut(k);
+      if (k < 1) animation.raf = requestAnimationFrame(step);
+      else centerAnimation = null;
+    };
+    animation.raf = requestAnimationFrame(step);
   }
   function follow() {
-    if (pendingCard) { centerCard(pendingCard.site); return; }
+    if (pendingCard || centerAnimation) return;
     if (!xs.length) return;
     scroller.scrollLeft = xAt(app.t) - scroller.clientWidth / 2;
   }
@@ -94,20 +115,26 @@ export function createBand(app, sites) {
     } finally {
       if (pendingCard === request) {
         pendingCard = null;
-        if (app.selected === s) centerCard(s);
-        else follow();
+        if (app.selected !== s) { stopCenter(); follow(); }
       }
     }
   }
 
+  // 手動で帯を動かし始めたら、カードへの自動移動を止める
+  const takeControl = () => { pendingCard = null; stopCenter(); };
+  scroller.addEventListener('pointerdown', takeControl);
   // 縦のホイールでも横に流す
   scroller.addEventListener('wheel', (e) => {
+    takeControl();
     if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
     e.preventDefault();
     scroller.scrollLeft += e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
   }, { passive: false });
 
-  app.on('t', follow);
+  app.on('t', () => {
+    if (!pendingCard) stopCenter();
+    follow();
+  });
   app.on('era', (era, prev) => {
     if (prev) eraEls.get(prev.id)?.classList.remove('is-now');
     eraEls.get(era.id)?.classList.add('is-now');
@@ -118,7 +145,9 @@ export function createBand(app, sites) {
     if (pendingCard) {
       const clicked = pendingCard.site === s;
       pendingCard = null;
-      if (clicked) centerCard(s);
+      if (!clicked) stopCenter();
+    } else if (centerAnimation && centerAnimation.site !== s) {
+      stopCenter();
     }
   });
   app.on('scene', (s) => { const c = cards.get(s.id); if (c?.thumb) c.thumb.src = `assets/pano/${s.pano}_thumb.jpg`; });
