@@ -207,7 +207,10 @@ export function createTimeline(app, { major = [], detail = [] }) {
     rows.push({ d, row });
   }
   let closeTimer = 0, moveFrame = 0, pendingY = 0, positions = [];
-  const setOpen = (v) => { box.classList.toggle('is-open', v); };
+  const setOpen = (v, immediate = false) => {
+    box.classList.toggle('is-instant', !v && immediate);
+    box.classList.toggle('is-open', v);
+  };
   // 左右の同じ年を結び、その間も連続して対応させる。同じ年の行はひとまとまりとして扱う。
   function measurePositions() {
     positionsDirty = false;
@@ -276,6 +279,12 @@ export function createTimeline(app, { major = [], detail = [] }) {
   majorList.addEventListener('pointerleave', () => {
     cancelAnimationFrame(moveFrame);
     moveFrame = 0;
+  });
+  slider.addEventListener('pointerenter', () => {
+    clearTimeout(closeTimer);
+    cancelAnimationFrame(moveFrame);
+    moveFrame = 0;
+    setOpen(false, true);
   });
   for (const el of [nav, box]) { el.addEventListener('pointerenter', stay); el.addEventListener('pointerleave', leave); }
 

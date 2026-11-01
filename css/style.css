@@ -56,7 +56,7 @@ a { color: inherit; }
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 .mono { font-family: var(--mono); font-feature-settings: 'tnum'; }
 
-/* 共通の細いスクロールバー（史跡帯・詳細年表・吹き出し） */
+/* 共通の細いスクロールバー（史跡帯・吹き出し） */
 .thin-scroll { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 .thin-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
 .thin-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -245,7 +245,8 @@ body.is-intro .map-zoom { opacity: 0; visibility: hidden; }
   transition: opacity 100ms ease-out, transform 100ms ease-out, visibility 0s linear 100ms;
 }
 #detail.is-open { opacity: 1; visibility: visible; transform: none; transition: opacity 100ms ease-out, transform 100ms ease-out, visibility 0s; }
-.detail-scroll { position: absolute; inset: 0; overflow-y: auto; padding: 14px 0 16px; overscroll-behavior: contain; }
+#detail.is-instant { transition: none; }
+.detail-scroll { position: absolute; inset: 0; overflow-y: hidden; padding: 14px 0 16px; }
 .dt-era {
   position: sticky; top: -14px; z-index: 1;
   margin: 6px 0 2px; padding: 12px 18px 6px;
