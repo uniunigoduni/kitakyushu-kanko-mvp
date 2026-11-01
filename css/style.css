@@ -241,10 +241,10 @@ body.is-intro .map-zoom { opacity: 0; visibility: hidden; }
   box-shadow: var(--shadow-float);
   z-index: 30;
   overflow: hidden;
-  opacity: 0; visibility: hidden; transform: translateX(-16px);
-  transition: opacity var(--t-panel), transform var(--t-panel), visibility 0s linear 180ms;
+  opacity: 0; visibility: hidden; transform: translateX(-6px);
+  transition: opacity 100ms ease-out, transform 100ms ease-out, visibility 0s linear 100ms;
 }
-#detail.is-open { opacity: 1; visibility: visible; transform: none; transition: opacity var(--t-panel), transform var(--t-panel), visibility 0s; }
+#detail.is-open { opacity: 1; visibility: visible; transform: none; transition: opacity 100ms ease-out, transform 100ms ease-out, visibility 0s; }
 .detail-scroll { position: absolute; inset: 0; overflow-y: auto; padding: 14px 0 16px; overscroll-behavior: contain; }
 .dt-era {
   position: sticky; top: -14px; z-index: 1;
