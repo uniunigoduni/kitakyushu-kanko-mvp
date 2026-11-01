@@ -45,7 +45,7 @@ function timelineData(raw, sites) {
   let detail = (raw?.detail ?? [])
     .map((d) => ({ year: Number(d.year), era: d.era, text: d.text ?? d.label ?? d.title, siteId: d.siteId ?? d.site }))
     .filter((d) => Number.isFinite(d.year) && d.text);
-  if (!detail.length) detail = sites.filter((s) => !s.dummy && !s.ad).map((s) => ({ year: s.year, era: s.eras[0], text: s.name, siteId: s.id }));
+  if (!detail.length) detail = sites.filter((s) => !s.dummy && !s.ad && !s.spot).map((s) => ({ year: s.year, era: s.eras[0], text: s.name, siteId: s.id }));
   return { major, detail };
 }
 
@@ -56,7 +56,7 @@ function fail(message, err) {
 }
 
 let geo, world;
-const [geoResult, sitesData, timelineRaw, arData, dummyData, adsData, roadsData] = await Promise.all([
+const [geoResult, sitesData, timelineRaw, arData, dummyData, adsData, roadsData, spotsData] = await Promise.all([
   loadGeo('data/').catch((err) => err),
   loadJSON('data/sites.json', { sites: [] }),
   loadJSON('data/timeline.json', null),
@@ -65,8 +65,10 @@ const [geoResult, sitesData, timelineRaw, arData, dummyData, adsData, roadsData]
   loadJSON('data/dummy_pins.json', { sites: [] }),
   // ピン型の広告の見本（架空のお店。現代の地図にだけ出す）
   loadJSON('data/ads.json', { ads: [] }),
-  // 現代の道（© OpenStreetMap contributors。tools/build_roads.py）。現代の地図と観光マップにだけ出す
+  // 現代の道（© OpenStreetMap contributors。tools/build_roads.py）。現代の地図にだけ出す
   loadJSON('data/roads.json', null),
+  // 現代の地図に載せる主な観光地
+  loadJSON('data/spots.json', { spots: [] }),
 ]);
 if (geoResult instanceof Error) {
   fail('地図のデータを読み込めませんでした。ページを読み込み直してください。', geoResult);
@@ -80,7 +82,9 @@ if (geoResult instanceof Error) {
 }
 // 広告は小さいピンと同じく寄ったときに出す。自分の広告の見本（preview）は、お店として登録するまでどの時代にも出さない
 const ads = (adsData?.ads ?? []).map((a) => ({ level: 1, year: NOW_YEAR, yearLabel: '広告', eras: a.preview ? [] : ['now'], ...a, ad: true }));
-if (world) start(world, [...(sitesData?.sites ?? []), ...(dummyData?.sites ?? []).map((s) => ({ ...s, dummy: true })), ...ads], arData);
+// 観光地は現代の地図に出す（年は今年。番号は下の一覧とピンで同じ）
+const spots = (spotsData?.spots ?? []).map((s) => ({ level: 3, year: NOW_YEAR, yearLabel: s.kind, eras: ['now'], ...s, spot: true }));
+if (world) start(world, [...(sitesData?.sites ?? []), ...(dummyData?.sites ?? []).map((s) => ({ ...s, dummy: true })), ...ads, ...spots], arData);
 
 function start(world, sites, arData) {
   // 360度の画像がある史跡にだけ「ARで探検」を出す。
@@ -192,6 +196,7 @@ function start(world, sites, arData) {
     const s = app.byId.get(id);
     if (!s || !s.eras.length) return; // まだ出していない自分の広告の見本
     if (s.ad) dist ??= world.home.distance * 0.1; // 広告は、まわりの通りが見えるところまで寄って開く
+    if (s.spot) dist ??= world.home.distance * 0.16; // 観光地は、まわりの道と広告が見えるところまで寄って開く
     if (app.selected === s) { if (stage.site === s) return; if (from !== 'map') world.view(viewFor(s, dist)); return; }
     // 特別な場面を開いていたら、カメラを戻さずにしまう（次の史跡へは、場面に入る前の視点から動かす）
     const left = stage.active ? stage.leave('other') : null;
@@ -270,7 +275,7 @@ function start(world, sites, arData) {
   app.on('select', (s) => { if (s.pano) ar.preload(s.pano).catch(() => {}); });
   // 現代の道は現代の地図にだけ出す（年を動かしている途中では出さず、着いて少し待ってから）
   app.on('era', (era) => world.setRoads(era.id === 'now'));
-  createBand(app, sites.filter((s) => !s.dummy && !s.ad)); // ダミーのピンと広告は一覧に出さない
+  createBand(app, sites.filter((s) => !s.dummy && !s.ad)); // ダミーのピンと広告は一覧に出さない（観光地は現代の欄に番号の順で並ぶ）
   createTimeline(app, { major, detail });
   createFlavor(app);
 

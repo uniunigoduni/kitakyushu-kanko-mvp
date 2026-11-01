@@ -17,10 +17,11 @@ const GEOM = {
   frame: { w: 62, h: 40, stem: 34 },   // 写真の枠のピン（時代ごとの場面がある場所）
   dummy: { w: 8, h: 8, stem: 0 },      // MVP 用のダミー
   ad: { w: 24, h: 24, stem: 17 },      // 広告（しずく形の先が根元）
+  spot: { w: 24, h: 24, stem: 14 },    // 現代の地図の観光地（番号の丸）
 };
 // 一押しの史跡（pick）は、出す順では最大レベルのまま、大きさは中のピンにして色で見分ける。
 // 現代の地図に出すとき（today）は、特別演出のある史跡も中のピンにそろえる
-export const geomOf = (s, today = false) => GEOM[s.scenes ? 'frame' : s.special && !today ? 'special' : s.dummy ? 'dummy' : s.ad ? 'ad' : s.pick ? 2 : s.level];
+export const geomOf = (s, today = false) => GEOM[s.scenes ? 'frame' : s.special && !today ? 'special' : s.dummy ? 'dummy' : s.ad ? 'ad' : s.spot ? 'spot' : s.pick ? 2 : s.level];
 // ピンに添える短い名前：「戦時中の門司港：出征の港と空襲」→「戦時中の門司港」
 export const pinLabel = (name) => name.split('：')[0].replace(/（[^）]*）/g, '');
 // 一押しの史跡は、その時代に加えて現代の地図にも「いまの姿」として出す
@@ -29,9 +30,9 @@ export const isToday = (s, era) => !!s.pick && era?.id === 'now' && !s.eras.incl
 // 年がはっきりしない伝承などは、データの yearShort（「平安末期」など）をそのまま使う
 export const yearTag = (s) => s.yearShort ?? shortYear(s.yearLabel ?? '').match(/^前?\d+(?:〜\d+)?年頃?/)?.[0] ?? `${formatYear(s.year)}年`;
 
-// 置く順（小さいほど先）：写真の枠 → 特別演出 → 広告 → 最大レベル → 中 → 小 → ダミー。同じレベルは注目の史跡が先。
-// 広告は、自分の広告の見本（お店として登録した人にだけ出る）を先に置く
-const tierOf = (s) => (s.scenes ? 0 : s.special ? 1 : s.ad ? (s.preview ? 1.4 : 1.5) : s.dummy ? 8 : (3 - s.level) * 2 + (s.featured ? 2 : 3));
+// 置く順（小さいほど先）：写真の枠 → 特別演出 → 広告 → 観光地 → 最大レベル → 中 → 小 → ダミー。同じレベルは注目の史跡が先。
+// 広告は、自分の広告の見本（お店として登録した人にだけ出る）を先に置く。観光地は現代の地図にだけ出て、番号の順に置く
+const tierOf = (s) => (s.scenes ? 0 : s.special ? 1 : s.ad ? (s.preview ? 1.4 : 1.5) : s.spot ? 1.6 : s.dummy ? 8 : (3 - s.level) * 2 + (s.featured ? 2 : 3));
 // 出す近さ（ホームの距離に対する比がこれより小さいとき）。注目の史跡と中・最大レベル、広告はいつでも出す
 const SMALL_R = 0.6, NAME_R = 0.4;        // 小さいピン、その名前
 const DUMMY_R = 0.36, DUMMY_NAME_R = 0.2; // ダミーのピン、その名前
@@ -53,11 +54,13 @@ const SHORT = 0.5; // どの向きもふさがっているときの、いちば�
 
 export function createPins(app, world, sites) {
   const pins = new Map();
+  // 観光地と同じ建物の史跡（観光地の same）：史跡の id → 観光地の id
+  const merged = new Map(sites.filter((s) => s.spot && s.same && s.site).map((s) => [s.site, s.id]));
   for (const s of sites) {
     const head = h('span', { class: 'pin-head' });
     const label = h('span', { class: 'pin-name', text: pinLabel(s.name) });
     const hit = h('button', { class: 'pin-hit', type: 'button', tabindex: -1, 'aria-label': s.name }, head, label);
-    const kind = (s.scenes ? ' is-frame' : s.special ? ' is-special' : s.dummy ? ' is-dummy' : s.ad ? ' is-ad' : '') + (s.pick ? ' is-pick' : '');
+    const kind = (s.scenes ? ' is-frame' : s.special ? ' is-special' : s.dummy ? ' is-dummy' : s.ad ? ' is-ad' : s.spot ? ' is-spot' : '') + (s.pick ? ' is-pick' : '');
     const el = h('div', { class: `pin lv${s.level}${kind} is-off` }, h('i', { class: 'pin-shadow' }), h('i', { class: 'pin-stem' }), hit);
     const obj = new CSS2DObject(el);
     obj.position.copy(world.at(s.lon, s.lat, 0.4));
@@ -66,8 +69,8 @@ export function createPins(app, world, sites) {
     obj.renderOrder = 10 - tier; // 大事なピンほど上に重ねる
     world.pinScene.add(obj);
     const p = { s, g: geomOf(s), el, hit, head, label, obj, tier, n: pins.size, show: showUnder(s), name: nameUnder(s), on: false, today: false, state: '', w: 0, offTimer: 0 };
-    // 大事なピン（頭を先に置く）：最大レベル・注目・一押し・特別演出・写真の枠・広告
-    p.major = !s.dummy && (s.level >= 3 || !!s.featured || !!s.special || !!s.scenes || !!s.pick || !!s.ad);
+    // 大事なピン（頭を先に置く）：最大レベル・注目・一押し・特別演出・写真の枠・広告・観光地
+    p.major = !s.dummy && (s.level >= 3 || !!s.featured || !!s.special || !!s.scenes || !!s.pick || !!s.ad || !!s.spot);
     p.forced = false; p.left = false; p.q = { x: 0, y: 0 };
     p.was = ''; p.wasLeft = false; p.skip = false; p.evicted = false;
     if (s.scenes) {
@@ -76,6 +79,7 @@ export function createPins(app, world, sites) {
       setFrame(p, s.pano);
     }
     if (s.ad) setAd(p);
+    if (s.spot) setSpot(p);
     hit.addEventListener('click', () => app.selectSite(s.id, { from: 'map' }));
     hit.addEventListener('pointerenter', () => { if (A.pin === p && A.drawn) g.classList.remove('is-dim'); });
     hit.addEventListener('pointerleave', () => { if (A.pin === p && A.drawn) g.classList.add('is-dim'); });
@@ -102,6 +106,15 @@ export function createPins(app, world, sites) {
     p.w = 0;
   }
 
+  // 観光地のピンは、丸の中に一覧と同じ番号。名前は短い名前
+  function setSpot(p) {
+    const s = p.s;
+    p.head.replaceChildren(h('b', { class: 'pin-num', text: String(s.n) }));
+    p.label.replaceChildren(s.short ?? pinLabel(s.name));
+    p.hit.setAttribute('aria-label', `${s.n}. ${s.name}`);
+    p.w = 0;
+  }
+
   // 現代の地図に出す一押しの史跡は、いまの名前に、さかのぼる先の年を添える
   function setToday(p, today) {
     const s = p.s;
@@ -123,9 +136,10 @@ export function createPins(app, world, sites) {
     needMeasure = true;
     dirty = true;
   }
-  // その時代に出すピンを出し、出さないピンをしまう
+  // その時代に出すピンを出し、出さないピンをしまう。
+  // 観光地と同じ建物の一押しの史跡は、現代の地図では観光地のピンにまとめる（さかのぼるのは観光地の吹き出しから）
   function turn(p, era) {
-    const today = isToday(p.s, era);
+    const today = isToday(p.s, era) && !merged.has(p.s.id);
     if (today !== p.today) setToday(p, today);
     const on = p.s.eras.includes(era.id) || today;
     if (on === p.on) return;
@@ -428,7 +442,7 @@ export function createPins(app, world, sites) {
 
   // ---------- 出来事に合わせる ----------
   // 矢印を引く史跡：その時代に出ている注目の史跡のうち、いちばん先に置くもの（どの時代にも出る写真の枠とダミーは除く）。
-  // 現代では、一押しの門司港駅（現代の地図から 1914 年へさかのぼれる）がいちばん先になる
+  // 広告は注目の史跡ではないので選ばれない。現代では、観光地の 1 番の門司港駅（吹き出しから 1914 年へさかのぼれる）になる
   const featuredOf = () => {
     let best = null;
     for (const p of pins.values()) {
@@ -496,8 +510,8 @@ export function createPins(app, world, sites) {
     holdArrow() { A.hold = true; clearTimeout(A.timer); },
     releaseArrow(delay = 1000) { A.hold = false; schedule(delay); },
     position: (id) => pins.get(id)?.obj.position,
-    // 現代へ戻ったとき、いまの場所のピンを弾ませる
-    pop(id) { const p = pins.get(id); if (p) pop(p); },
+    // 現代へ戻ったとき、いまの場所のピンを弾ませる（観光地にまとめた史跡は、観光地のピン）
+    pop(id) { const p = pins.get(merged.get(id) ?? id); if (p) pop(p); },
     // 中身や出す時代を変えたピンを描き直す（自分の広告の見本の店名・業種）
     refresh(id) {
       const p = pins.get(id);

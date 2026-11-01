@@ -2,7 +2,7 @@
 // 別のピンを選ぶと、前の吹き出しは消して新しい中身に入れ替える。
 // 特別な場面の「解説を読む」では、しっぽを付けずに地図の窓の端に寄せて出す（dock）。
 import { clamp, h, isPaid, paidUntil } from '../util.js';
-import { pinLabel } from './pins.js';
+import { pinLabel, yearTag } from './pins.js';
 import { adCard } from './ads.js';
 
 const M = 8;     // 地図の窓の縁からの余白
@@ -27,6 +27,31 @@ export function createPopup(app, world, pins) {
 
   function fill(s) {
     el.classList.toggle('is-ad', !!s.ad);
+    el.classList.toggle('is-spot', !!s.spot);
+    if (s.spot) {
+      // 観光地（現代の地図）：番号と名前、種類と行き方、紹介文。昔の史跡がある場所は「この場所の歴史」から、その史跡の年へ移って開く
+      const site = s.site ? app.byId.get(s.site) : null;
+      clearTimeout(paidTimer);
+      scroll.replaceChildren(...[
+        h('div', { class: 'spot-head' },
+          h('span', { class: 'spot-tile', 'aria-hidden': 'true', text: String(s.n) }),
+          h('div', { class: 'spot-title' },
+            h('p', { class: 'spot-meta' }, [s.kind, s.access].filter(Boolean).flatMap((t, i) => [i ? ' · ' : null, h('span', { class: 'spot-meta-part', text: t })])),
+            h('h2', { class: 'spot-name', id: 'popup-name', text: s.name }))),
+        s.summary ? h('p', { class: 'popup-summary', text: s.summary }) : null,
+        site ? h('button', { class: 'spot-history', type: 'button', onclick: () => app.selectSite(site.id) },
+          h('span', { class: 'spot-history-text' },
+            h('span', { class: 'spot-history-tag', text: 'この場所の歴史' }),
+            h('span', { class: 'spot-history-name' }, h('span', { class: 'spot-history-year', text: yearTag(site) }), pinLabel(site.name)))) : null,
+        s.sources?.length > 0 ? h('ul', { class: 'popup-sources' }, s.sources.map((r) =>
+          h('li', {}, r.url ? h('a', { href: r.url, target: '_blank', rel: 'noopener', text: r.title }) : r.title))) : null,
+      ].filter(Boolean));
+      scroll.scrollTop = 0;
+      foot.classList.remove('ad-foot');
+      foot.hidden = true;
+      foot.replaceChildren();
+      return;
+    }
     if (s.ad) {
       // 広告：お店の名前とボタン、紹介文、特典と営業時間。下の帯は、架空のお店であること（自分の見本なら掲載前であること）と、お店の方への入口
       const card = adCard(app, s);

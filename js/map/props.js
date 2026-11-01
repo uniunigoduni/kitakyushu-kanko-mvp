@@ -318,7 +318,7 @@ export function buildRail(geo, shared) {
 }
 
 // ---------- 現代の道（© OpenStreetMap contributors。tools/build_roads.py で作った data/roads.json） ----------
-// 現代の地図と観光マップにだけ出す。年を動かすと現代だけ道が現れるので、目立ちすぎない明るい灰色にする。
+// 現代の地図にだけ出す。年を動かすと現代だけ道が現れるので、目立ちすぎない明るい灰色にする。
 // 太さは画面の px で、寄るほど太く（width → max）。町の中の細い道（minor）は寄ったときだけ出す。
 // clear は町並み・木を置かない帯の幅（道の中心から、単位）
 const ROADS = {

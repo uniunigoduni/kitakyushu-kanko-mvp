@@ -954,7 +954,7 @@ body.is-intro #timeline, body.is-intro #band, body.is-intro .map-canvas { pointe
 @keyframes pay-up { from { opacity: 0; transform: translateY(8px); } }
 @keyframes pay-spin { to { transform: rotate(1turn); } }
 
-/* ---------- 右上のボタン（観光マップ・新規登録・共有）。最初の流しの間は隠す ---------- */
+/* ---------- 右上のボタン（新規登録・共有）。最初の流しの間は隠す ---------- */
 .title-actions {
   margin-left: auto; flex: 0 0 auto;
   display: flex; align-items: center; gap: 8px;
@@ -1207,6 +1207,49 @@ body.is-stage .map-pins, body.is-stage .arrow-layer { opacity: 0; visibility: hi
   /* 札は窓の下いっぱいに出るので、拡大・縮小のボタンはその上へ */
   body.is-stage .map-zoom { bottom: calc(var(--stage-h, 0px) + 16px); }
 }
+
+/* ---------- 現代の地図の観光地（data/spots.json）。ピン・吹き出し・下の帯のカードに、差し色の丸で番号を出す ---------- */
+.bc-num, .spot-tile {
+  display: grid; place-items: center; flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--era-accent); color: #0c0c0c;
+  font-family: var(--sans); font-weight: 700; line-height: 1; font-feature-settings: 'tnum'; letter-spacing: 0;
+}
+.band-card.is-spot { grid-template-columns: auto minmax(0, 1fr); align-items: start; }
+.bc-num { width: 26px; height: 26px; margin-top: 1px; font-size: 13px; }
+.band-card.is-spot.is-selected .bc-num { background: var(--strong); }
+.pin.is-spot { --head: 24px; --stem: 14px; }
+.pin.is-spot .pin-head {
+  display: grid; place-items: center;
+  background: var(--era-accent); border: 2px solid #0c0c0c;
+  box-shadow: 0 0 0 1.5px rgba(242, 242, 242, .9), 0 2px 8px rgba(0, 0, 0, .6);
+}
+.pin.is-spot .pin-head::after { display: none; }
+.pin-num { font: 700 12.5px/1 var(--sans); font-feature-settings: 'tnum'; letter-spacing: 0; color: #0c0c0c; }
+.pin.is-spot .pin-name { font-size: 13px; font-weight: 700; }
+.pin.is-spot.is-selected .pin-head { background: var(--strong); border-color: #0c0c0c; }
+/* 観光地の吹き出し：番号と名前、種類と行き方、紹介文、その場所の史跡への入口 */
+.popup.is-spot .popup-scroll { padding: 14px 12px 12px; }
+.spot-head { display: flex; align-items: center; gap: 12px; }
+.spot-tile { width: 44px; height: 44px; font-size: 19px; }
+.spot-title { min-width: 0; }
+.spot-meta { margin: 0; padding-right: 32px; font-size: 12px; line-height: 1.6; color: var(--muted); }
+.spot-meta-part { white-space: nowrap; }
+.spot-name { margin: 1px 0 0; padding-right: 32px; font-size: 17px; line-height: 1.4; font-weight: 700; color: var(--strong); letter-spacing: .03em; word-break: auto-phrase; text-wrap: balance; } /* 閉じるボタンの下に入らないように */
+.popup.is-spot .popup-summary { margin-top: 12px; font-size: 13.5px; line-height: 1.75; text-wrap: pretty; }
+.spot-history {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; margin: 12px 0 0; padding: 9px 10px 9px 12px;
+  text-align: left;
+  border: 1px solid var(--line); border-radius: var(--radius);
+  transition: background-color var(--t-hover);
+}
+.spot-history:hover { background: var(--overlay); }
+.spot-history-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.spot-history-tag { font-size: 11.5px; font-weight: 700; letter-spacing: .1em; color: var(--era-accent); }
+.spot-history-name { font-size: 13.5px; line-height: 1.5; font-weight: 700; color: var(--strong); word-break: auto-phrase; }
+.spot-history-year { margin-right: .6em; font: 500 12px/1 var(--mono); font-feature-settings: 'tnum'; color: var(--muted); }
+.spot-history::after { content: '›'; flex: 0 0 auto; font-size: 18px; line-height: 1; color: var(--muted); }
 
 /* ---------- 画面が狭いとき（スマホ） ---------- */
 @media (max-width: 760px) {

@@ -355,7 +355,10 @@ export async function createWorld(container, geo, { roads: roadData = null } = {
     if (atHome) controls.setLookAt(...homePosition(), home.target.x, home.target.y, home.target.z, false);
     shadowState.key = '';
     wake();
+    // 大きさを変えると描いた絵が消えるので、その場で描き直す（次のコマまで地図が空に見えないように）
+    if (drawing && !paused) render();
   }
+  let drawing = false; // 毎コマの描画を始めたら true
   function homePosition() {
     placeCamera(probe, home.target, home.polar, home.azimuth, home.distance);
     return [probe.position.x, probe.position.y, probe.position.z];
@@ -752,6 +755,7 @@ export async function createWorld(container, geo, { roads: roadData = null } = {
   try { await renderer.compileAsync(scene, camera); } catch { /* 古いブラウザは最初の描画で組み立てる */ }
   renderer.setRenderTarget(null);
   renderer.setAnimationLoop(loop);
+  drawing = true;
 
   const world = {
     THREE, geo, renderer, scene, camera, controls, shared, fxRoot, sun, hemi, rail, roads, labelScene, pinScene,

@@ -1,4 +1,5 @@
 // 下の史跡帯：左が縄文、右が現代。スライダーに合わせて横に流れ、いまの時代の史跡を真ん中に寄せる。
+// 現代の欄の終わりには、現代の地図に載せた観光地を番号の順に並べる
 import { ERAS, yearToT } from '../eras.js';
 import { h } from '../util.js';
 
@@ -17,26 +18,36 @@ export function createBand(app, sites) {
   for (const s of sites) byEra.get(s.bandEra ?? s.eras[0])?.push(s);
 
   for (const e of ERAS) {
-    const group = byEra.get(e.id).sort((a, b) => a.year - b.year);
+    const group = byEra.get(e.id).sort((a, b) => a.year - b.year || (a.n ?? 0) - (b.n ?? 0));
     const div = h('li', { class: 'band-era', 'aria-hidden': 'true', text: e.name });
     list.append(div);
     eraEls.set(e.id, div);
     anchors.push({ t: e.t0, el: div, at: 'left' });
     // 時代の中の並びは年の順。帯の位置が時代の外へはみ出さないように、時代の幅の内側へ寄せる
     const pad = (e.t1 - e.t0) * 0.12;
-    let prevT = e.t0;
+    let prevT = e.t0, spots = 0;
     for (const s of group) {
       const thumb = s.pano && h('img', { class: 'bc-thumb', src: `assets/pano/${s.pano}_thumb.jpg`, alt: '', loading: 'lazy', decoding: 'async' });
-      const btn = h('button', { class: 'band-card', type: 'button', dataset: { id: s.id }, onclick: () => app.selectSite(s.id) },
-        h('span', { class: 'bc-text' },
-          h('span', { class: 'bc-year', text: shortYear(s.yearLabel ?? '') }),
-          h('span', { class: 'bc-name', text: s.name }),
-          s.level >= 2 && h('span', { class: 'bc-meta', text: 'ガイドあり' })),
-        thumb);
+      // 観光地のカードは、ピンと同じ番号・種類・行き方
+      const btn = s.spot
+        ? h('button', { class: 'band-card is-spot', type: 'button', dataset: { id: s.id }, 'aria-label': `${s.n}. ${s.name}`, onclick: () => app.selectSite(s.id) },
+          h('span', { class: 'bc-num', 'aria-hidden': 'true', text: String(s.n) }),
+          h('span', { class: 'bc-text' },
+            h('span', { class: 'bc-year', text: s.kind }),
+            h('span', { class: 'bc-name', text: s.name }),
+            s.access && h('span', { class: 'bc-meta', text: s.access })))
+        : h('button', { class: 'band-card', type: 'button', dataset: { id: s.id }, onclick: () => app.selectSite(s.id) },
+          h('span', { class: 'bc-text' },
+            h('span', { class: 'bc-year', text: shortYear(s.yearLabel ?? '') }),
+            h('span', { class: 'bc-name', text: s.name }),
+            s.level >= 2 && h('span', { class: 'bc-meta', text: 'ガイドあり' })),
+          thumb);
       const li = h('li', {}, btn);
       list.append(li);
       cards.set(s.id, { s, btn, thumb, era: e });
-      const t = Math.max(prevT + 1e-4, Math.min(Math.max(yearToT(s.year), e.t0 + pad), e.t1 - pad));
+      // 観光地は今年の場所なので、1 番目を「今」（最初の画面の年）に合わせて真ん中に置き、2 番目からは帯の終わりまでの間に流す
+      if (s.spot && spots++) continue;
+      const t = Math.max(prevT + 1e-4, s.spot ? app.tNow : Math.min(Math.max(yearToT(s.year), e.t0 + pad), e.t1 - pad));
       prevT = t;
       anchors.push({ t, el: li, at: 'center' });
     }

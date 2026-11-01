@@ -1,0 +1,200 @@
+{
+ "note": "現代の地図に載せる主な観光地（番号は下の一覧とピンで同じ）。位置は © OpenStreetMap contributors（ODbL）の地物と各出典から。橋台下広場・西海岸緑地は目安。site はその場所の史跡（吹き出しの「この場所の歴史」から、その年へ移って開く）。same: true は site と同じ建物で、現代の地図ではその史跡の「いまの姿」のピンを観光地のピンにまとめる。",
+ "spots": [
+  {
+   "id": "spot_moji_station",
+   "n": 1,
+   "name": "門司港駅",
+   "kind": "駅舎",
+   "lat": 33.9451,
+   "lon": 130.9615,
+   "access": "JR鹿児島本線の終点",
+   "summary": "1914（大正3）年にできた駅舎。1988年に鉄道駅として初めて国の重要文化財になり、2019年3月に保存修理を終えて、できた当時の姿に戻った。",
+   "site": "moji_station",
+   "same": true,
+   "featured": true,
+   "sources": [
+    {
+     "title": "JR九州「門司港駅 グランドオープン」",
+     "url": "https://www.jrkyushu.co.jp/company/mojiko_sta/aisatu/index.html"
+    },
+    {
+     "title": "北九州市「門司港駅」",
+     "url": "https://www.city.kitakyushu.lg.jp/moji/w1100456.html"
+    },
+    {
+     "title": "乗りものニュース「門司港駅、復原工事完了」",
+     "url": "https://trafficnews.jp/post/84251"
+    }
+   ]
+  },
+  {
+   "id": "spot_mitsui_club",
+   "n": 2,
+   "name": "旧門司三井倶楽部",
+   "kind": "洋館",
+   "lat": 33.9458,
+   "lon": 130.9625,
+   "access": "門司港駅から徒歩1分",
+   "summary": "1921（大正10）年に三井物産の社交倶楽部として建てられた洋館で、国の重要文化財。2階には、アインシュタインが泊まった部屋を再現したメモリアルルームと林芙美子記念室がある（2階は有料）。",
+   "site": "mitsui_club",
+   "same": true,
+   "sources": [
+    {
+     "title": "門司港レトロ「旧門司三井倶楽部」",
+     "url": "https://mojiko-retoro9.jp/spot/former_moji_mitsui_club/"
+    }
+   ]
+  },
+  {
+   "id": "spot_moji_zeikan",
+   "n": 3,
+   "name": "旧門司税関",
+   "kind": "洋館",
+   "lat": 33.9477,
+   "lon": 130.9636,
+   "access": "門司港駅から徒歩約5分",
+   "summary": "1912（明治45）年にできた税関の庁舎。いまは入場無料の休憩所で、税関の広報展示室とカフェがあり、港とはね橋を眺められる。",
+   "site": "kyu_moji_zeikan",
+   "same": true,
+   "sources": [
+    {
+     "title": "門司港レトロ「旧門司税関」",
+     "url": "https://mojiko-retoro9.jp/spot/former_moji_customs_bldg/"
+    }
+   ]
+  },
+  {
+   "id": "spot_nishikaigan",
+   "n": 4,
+   "name": "西海岸緑地",
+   "kind": "緑地",
+   "lat": 33.9443,
+   "lon": 130.957,
+   "access": "門司港駅から徒歩約5分",
+   "summary": "（確認中）",
+   "site": "dairen_koro",
+   "sources": []
+  },
+  {
+   "id": "spot_norfolk",
+   "n": 5,
+   "name": "ノーフォーク広場",
+   "kind": "広場",
+   "lat": 33.9573,
+   "lon": 130.9622,
+   "access": "（確認中）",
+   "summary": "姉妹都市の米国ノーフォーク市にちなんで、1986年に整えられた広場。両市の市章と地図を陶製のタイルで描いた記念碑があり、ここから和布刈へ観潮遊歩道が延びる。",
+   "sources": [
+    {
+     "title": "北九州市「姉妹都市 ノーフォーク市」",
+     "url": "https://www.city.kitakyushu.lg.jp/kikaku/01800285.html"
+    },
+    {
+     "title": "北九州の史跡探訪「和布刈地区」",
+     "url": "https://sisekib.kitahistory.net/mo-mekari.htm"
+    }
+   ]
+  },
+  {
+   "id": "spot_ubuyui",
+   "n": 6,
+   "name": "産湯井（平家の一杯水）",
+   "kind": "伝承",
+   "lat": 33.95896,
+   "lon": 130.9619,
+   "access": "（確認中）",
+   "summary": "鸕鶿草葺不合尊（うがやふきあえずのみこと）の産湯の井戸と伝わる湧き水の跡。壇ノ浦の戦いのとき、平家の武士たちがこの水でのどをうるおしたとも伝わり、「平家の一杯水」とも呼ばれる。",
+   "site": "dannoura",
+   "sources": [
+    {
+     "title": "北九州の史跡探訪「和布刈地区」",
+     "url": "https://sisekib.kitahistory.net/mo-mekari.htm"
+    }
+   ]
+  },
+  {
+   "id": "spot_kyodai",
+   "n": 7,
+   "name": "橋台下広場",
+   "kind": "広場",
+   "lat": 33.9594,
+   "lon": 130.9626,
+   "access": "（確認中）",
+   "summary": "（確認中）",
+   "site": "kanmon_bridge",
+   "sources": []
+  },
+  {
+   "id": "spot_ishidoro",
+   "n": 8,
+   "name": "石灯籠（和布刈神社）",
+   "kind": "灯籠",
+   "lat": 33.9603,
+   "lon": 130.962,
+   "access": "（確認中）",
+   "summary": "和布刈神社の社殿の前、石段を下りた海岸に置かれた石灯籠。旧門司の豪商・永井力五郎の寄進で建てられた。",
+   "site": "mekari_jinja",
+   "sources": [
+    {
+     "title": "北九州の史跡探訪「和布刈地区」",
+     "url": "https://sisekib.kitahistory.net/mo-mekari.htm"
+    }
+   ]
+  },
+  {
+   "id": "spot_kancho",
+   "n": 9,
+   "name": "観潮テラス",
+   "kind": "展望",
+   "lat": 33.96089,
+   "lon": 130.96233,
+   "access": "（確認中）",
+   "summary": "（確認中）",
+   "site": "kanmon_road_tunnel",
+   "sources": []
+  },
+  {
+   "id": "spot_mekari_park",
+   "n": 10,
+   "name": "めかり公園（和布刈公園）",
+   "kind": "公園",
+   "lat": 33.95821,
+   "lon": 130.96648,
+   "access": "（確認中）",
+   "summary": "古城山の一帯に広がる公園。第二展望台には源平の壇ノ浦の合戦を有田焼の陶板で描いた壁画があり、春には約1,400本の桜が咲く。",
+   "site": "moji_jo",
+   "sources": [
+    {
+     "title": "北九州市「和布刈公園」",
+     "url": "https://www.city.kitakyushu.lg.jp/contents/924_00675.html"
+    },
+    {
+     "title": "北九州市「和布刈公園 第二展望台」",
+     "url": "https://www.city.kitakyushu.lg.jp/contents/924_00898.html"
+    },
+    {
+     "title": "北九州市「和布刈公園の桜」",
+     "url": "https://www.city.kitakyushu.lg.jp/moji/w1100380.html"
+    }
+   ]
+  },
+  {
+   "id": "spot_mekari_pa",
+   "n": 11,
+   "name": "めかりPA（上り線展望台）",
+   "kind": "展望台",
+   "lat": 33.95852,
+   "lon": 130.96283,
+   "access": "関門自動車道の上り線から（一般道からは入れない）",
+   "summary": "関門自動車道（上り線）のパーキングエリア。2021年10月に約270m²の展望デッキができ、関門橋と関門海峡を眺められる。",
+   "site": "kanmon_bridge",
+   "sources": [
+    {
+     "title": "NEXCO西日本「めかりPA（上り線）に展望デッキがオープン」",
+     "url": "https://corp.w-nexco.co.jp/corporate/release/kyushu/r3/1008/"
+    }
+   ]
+  }
+ ]
+}

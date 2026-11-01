@@ -303,7 +303,7 @@ export function createFlavor(app) {
   const scenes = new Map();
   let cur = null, w = 0;
 
-  // 帯の左端はタイトルの文字の右、右端は右上のボタン（観光マップ・新規登録・共有）の手前（ボタンがなければ地図の窓の右）。
+  // 帯の左端はタイトルの文字の右、右端は右上のボタン（新規登録・共有）の手前（ボタンがなければ地図の窓の右）。
   // 時代名・書体・画面の幅・ボタンの幅（登録して名前に変わる）が変わるたびに測り直す
   const actions = title.querySelector('.title-actions');
   function layout() {
