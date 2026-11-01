@@ -29,14 +29,17 @@ export const isToday = (s, era) => !!s.pick && era?.id === 'now' && !s.eras.incl
 // 年がはっきりしない伝承などは、データの yearShort（「平安末期」など）をそのまま使う
 export const yearTag = (s) => s.yearShort ?? shortYear(s.yearLabel ?? '').match(/^前?\d+(?:〜\d+)?年頃?/)?.[0] ?? `${formatYear(s.year)}年`;
 
-// 置く順（小さいほど先）：写真の枠 → 特別演出 → 最大レベル → 中 → 小 → 広告 → ダミー。同じレベルは注目の史跡が先
-const tierOf = (s) => (s.scenes ? 0 : s.special ? 1 : s.dummy ? 8 : s.ad ? 7.5 : (3 - s.level) * 2 + (s.featured ? 2 : 3));
-// 出す近さ（ホームの距離に対する比がこれより小さいとき）。注目の史跡と中・最大レベルはいつでも出す
+// 置く順（小さいほど先）：写真の枠 → 特別演出 → 広告 → 最大レベル → 中 → 小 → ダミー。同じレベルは注目の史跡が先。
+// 広告は、自分の広告の見本（お店として登録した人にだけ出る）を先に置く
+const tierOf = (s) => (s.scenes ? 0 : s.special ? 1 : s.ad ? (s.preview ? 1.4 : 1.5) : s.dummy ? 8 : (3 - s.level) * 2 + (s.featured ? 2 : 3));
+// 出す近さ（ホームの距離に対する比がこれより小さいとき）。注目の史跡と中・最大レベル、広告はいつでも出す
 const SMALL_R = 0.6, NAME_R = 0.4;        // 小さいピン、その名前
 const DUMMY_R = 0.36, DUMMY_NAME_R = 0.2; // ダミーのピン、その名前
-const AD_R = 0.6, AD_NAME_R = 0.45;       // 広告のピン、その名前
-const showUnder = (s) => (s.dummy ? DUMMY_R : s.ad ? AD_R : s.level < 2 && !s.featured ? SMALL_R : Infinity);
-const nameUnder = (s) => (s.dummy ? DUMMY_NAME_R : s.ad ? AD_NAME_R : s.level < 2 && !s.featured ? NAME_R : Infinity);
+const small = (s) => s.level < 2 && !s.featured && !s.ad;
+const showUnder = (s) => (s.dummy ? DUMMY_R : small(s) ? SMALL_R : Infinity);
+const nameUnder = (s) => (s.dummy ? DUMMY_NAME_R : small(s) ? NAME_R : Infinity);
+// 広告どうしは、頭のまわりにこれだけ空ける（引いた視点で広告ばかりが固まらないように。寄るほど数が増える）
+const AD_GAP = 72, AD_GAP_KEEP = 56;
 // 重なりの判定の余白。出ているピンは少しの重なりまで許し、隠れているピンは余裕ができてから出す（ちらつかないように）
 const PAD_KEEP = 2, PAD_SHOW = 8;
 // 大事なピンどうしの頭は、もっと近くまで並べてよい（寄りきれば、近くの一押しの史跡が画面の奥のほうでも両方出る）
@@ -46,6 +49,7 @@ const OFF = 160;
 // 赤い矢印の引き始め（ピンの頭から見た位置。上から順に、それぞれ短くしたものも試す）
 const STARTS = [[-108, -84], [-132, -40], [108, -84], [-140, 24], [-108, 84], [-60, 120], [108, 84]];
 const SCALES = [1, 0.72];
+const SHORT = 0.5; // どの向きもふさがっているときの、いちばん短い矢印
 
 export function createPins(app, world, sites) {
   const pins = new Map();
@@ -62,9 +66,10 @@ export function createPins(app, world, sites) {
     obj.renderOrder = 10 - tier; // 大事なピンほど上に重ねる
     world.pinScene.add(obj);
     const p = { s, g: geomOf(s), el, hit, head, label, obj, tier, n: pins.size, show: showUnder(s), name: nameUnder(s), on: false, today: false, state: '', w: 0, offTimer: 0 };
-    // 大事なピン（頭を先に置く）：最大レベル・注目・一押し・特別演出・写真の枠
-    p.major = !s.dummy && (s.level >= 3 || !!s.featured || !!s.special || !!s.scenes || !!s.pick);
+    // 大事なピン（頭を先に置く）：最大レベル・注目・一押し・特別演出・写真の枠・広告
+    p.major = !s.dummy && (s.level >= 3 || !!s.featured || !!s.special || !!s.scenes || !!s.pick || !!s.ad);
     p.forced = false; p.left = false; p.q = { x: 0, y: 0 };
+    p.was = ''; p.wasLeft = false; p.skip = false; p.evicted = false;
     if (s.scenes) {
       p.img = h('img', { alt: '', decoding: 'async' });
       head.append(p.img);
@@ -207,15 +212,29 @@ export function createPins(app, world, sites) {
     const sel = app.selected;
     const rank = (p) => (p.s === sel ? -2 : p === A.pin ? -1 : p.tier);
     const list = [...pins.values()].filter((p) => p.on).sort((a, b) => rank(a) - rank(b) || a.n - b.n);
+    // 出ていたかどうかは、並べ始める前の状態で見る（並べ直しても、ちらつきを防ぐ余白が変わらないように）
+    for (const p of list) {
+      p.was = p.state; p.wasLeft = p.left; p.skip = false;
+      p.forced = p.s === sel || (p === A.pin && !sel) || !!p.s.scenes;
+    }
+    // 必ず出すピンの名前に押しのけられたピンは、外してから並べ直す（押しのけられたピンのせいで、
+    // まわりのピン（広告どうしの間など）まで出ないままにならないように）
+    for (let run = 0; run < 6 && placeMajor(list, r); run++);
+    for (const p of list) if (!p.major && !p.forced && placeHead(p, r)) placeName(p, r);
+  }
+  // 大事なピンの頭を全部置いてから、名前を置く。押しのけられたピンがあれば、印を付けて true を返す
+  function placeMajor(list, r) {
     placed.length = 0;
     const named = [];
     for (const p of list) {
-      p.forced = p.s === sel || (p === A.pin && !sel) || !!p.s.scenes;
       p.evicted = false;
-      if ((p.major || p.forced) && placeHead(p, r)) named.push(p);
+      if (p.skip) setState(p, 'crowded');
+      else if ((p.major || p.forced) && placeHead(p, r)) named.push(p);
     }
     for (const p of named) if (!p.evicted) placeName(p, r);
-    for (const p of list) if (!p.major && !p.forced && placeHead(p, r)) placeName(p, r);
+    let again = false;
+    for (const p of named) if (p.evicted) again = p.skip = true;
+    return again;
   }
   // 頭と軸を置く。名前まで置くときは true を返し、根元の位置を p.q に残す
   function placeHead(p, r) {
@@ -223,10 +242,11 @@ export function createPins(app, world, sites) {
     world.project(p.obj.position, Q);
     const { W, H } = world.size;
     if (!Q.visible || Q.x < -OFF || Q.x > W + OFF || Q.y < -OFF || Q.y > H + OFF) { setState(p, p.forced || r < p.name ? 'full' : 'dot'); return false; }
-    const kept = p.state === 'full' || p.state === 'dot';
+    const kept = p.was === 'full' || p.was === 'dot';
     const pad = p.major ? (kept ? PAD_KEEP_MAJOR : PAD_SHOW_MAJOR) : kept ? PAD_KEEP : PAD_SHOW;
     const hr = headRect(p, Q, [0, 0, 0, 0]);
     if (!p.forced && hits(hr, pad)) { setState(p, 'crowded'); return false; }
+    if (p.s.ad && !p.forced && hits(hr, kept ? AD_GAP_KEEP : AD_GAP, null, (q) => q.s.ad)) { setState(p, 'crowded'); return false; }
     put(hr, p);
     if (p.g.stem > p.g.h / 2) put(stemRect(p, Q, [0, 0, 0, 0]), p);
     p.q.x = Q.x; p.q.y = Q.y;
@@ -237,7 +257,7 @@ export function createPins(app, world, sites) {
     if (!p.forced && r >= p.name) { setState(p, 'dot'); return; }
     for (const left of [false, true]) {
       const nr = nameRect(p, p.q, left, [0, 0, 0, 0]);
-      if (outside(nr) || hits(nr, p.state === 'full' && p.left === left ? PAD_KEEP : PAD_SHOW, p)) continue;
+      if (outside(nr) || hits(nr, p.was === 'full' && p.wasLeft === left ? PAD_KEEP : PAD_SHOW, p)) continue;
       setSide(p, left);
       put(nr, p);
       setState(p, 'full');
@@ -363,22 +383,31 @@ export function createPins(app, world, sites) {
   }
 
   // 左上から引く。引き始めが窓からはみ出すときや、線が地名・ほかのピン・自分の名前にかかるときは、
-  // 短くするか、左・右上・左下・下・右下の順に向きを変える（P にはピンの頭の位置が入っている）
+  // 短くするか、左・右上・左下・下・右下の順に向きを変える（P にはピンの頭の位置が入っている）。
+  // どの向きもふさがっているときは、もっと短くして試し、それでもだめなら、かかるところがいちばん少ない向きにする
   function pickStart(p) {
     const { W, H } = world.size;
     const hw = p.g.w;
     const avoid = pinRects(world.labelRects(), p);
     if (p.w) avoid.push(p.left ? [P.x + hw / 2 - p.w, P.y - 11, P.x - hw / 2, P.y + 11] : [P.x + hw / 2, P.y - 11, P.x - hw / 2 + p.w, P.y + 11]);
     const inWin = ([dx, dy]) => P.x + dx > 16 && P.x + dx < W - 16 && P.y + dy > 16 && P.y + dy < H - 16;
-    const clear = ([dx, dy]) => {
+    // 線の上の 12 か所のうち、地名やピンにかかる数
+    const cost = ([dx, dy]) => {
+      let n = 0;
       for (let i = 0; i < 12; i++) {
         const k = i / 12, x = P.x + dx * (1 - k), y = P.y + dy * (1 - k);
-        for (const b of avoid) if (x > b[0] - 6 && x < b[2] + 6 && y > b[1] - 6 && y < b[3] + 6) return false;
+        for (const b of avoid) if (x > b[0] - 6 && x < b[2] + 6 && y > b[1] - 6 && y < b[3] + 6) { n++; break; }
       }
-      return true;
+      return n;
     };
+    const clear = (s) => !cost(s);
     const fit = STARTS.flatMap(([dx, dy]) => SCALES.map((k) => [dx * k, dy * k])).filter(inWin);
-    return fit.find(clear) ?? fit[0] ?? STARTS[0];
+    const short = STARTS.map(([dx, dy]) => [dx * SHORT, dy * SHORT]).filter(inWin);
+    const found = fit.find(clear) ?? short.find(clear);
+    if (found) return found;
+    let best = null, least = Infinity;
+    for (const s of fit.concat(short)) { const c = cost(s); if (c < least) { least = c; best = s; } }
+    return best ?? STARTS[0];
   }
 
   // ピンを一度だけ弾ませる

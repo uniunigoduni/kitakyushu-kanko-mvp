@@ -36,6 +36,9 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
+/* スマホで続けて2回押したとき（＋／−・ピン・地図など）に、画面ごと拡大しないように。2本指で広げる拡大はそのまま使える。
+   中で巻き取る欄（吹き出しの本文など）は外の指定を受け継がないので、全部の要素に付ける（地図などの none はそのまま） */
+* { touch-action: manipulation; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); }
 body {
   font: 14px/1.7 var(--sans);
