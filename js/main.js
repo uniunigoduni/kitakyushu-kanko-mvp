@@ -242,8 +242,8 @@ function start(world, sites, arData) {
   const { major, detail } = timelineData(timelineRaw, sites);
   const pins = createPins(app, world, sites);
   const popup = createPopup(app, world, pins);
-  const travel = createTravel(app, world);
-  createTicker(app, world);
+  const ticker = createTicker(app, world);
+  const travel = createTravel(app, world, ticker); // 行き来の名前は、真ん中の大きな年の下に添える
   const stage = createStage(app, world, pins, popup);
   createZoom(world, popup);
   const ar = createAR(app, world, arData);
