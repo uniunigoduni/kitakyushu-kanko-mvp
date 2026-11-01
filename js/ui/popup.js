@@ -9,6 +9,7 @@ const M = 8;     // 地図の窓の縁からの余白
 const GAP = 14;  // ピンと吹き出しの間（しっぽの分）
 const TAIL = 22; // しっぽを角から離す距離
 const MIN_H = 160;
+const ROUTE_OUTSET = 52; // 吹き出しの左右のボタンと間隔
 
 export function createPopup(app, world, pins) {
   const map = world.renderer.domElement.parentElement;
@@ -16,7 +17,17 @@ export function createPopup(app, world, pins) {
   const close = h('button', { class: 'popup-close', type: 'button', 'aria-label': '閉じる', text: '×', onclick: () => (onClose ? onClose() : app.deselect()) });
   const scroll = h('div', { class: 'popup-scroll thin-scroll' });
   const foot = h('div', { class: 'popup-foot' });
-  const el = h('div', { class: 'popup', role: 'dialog', 'aria-labelledby': 'popup-name', hidden: true }, tail, close, scroll, foot);
+  const route = app.sites.filter((s) => s.spot && Number.isFinite(s.n)).sort((a, b) => a.n - b.n);
+  const routeButtons = [-1, 1].map((direction) => h('button', {
+    class: `popup-route ${direction < 0 ? 'is-prev' : 'is-next'}`, type: 'button', hidden: true,
+    onclick: () => {
+      const i = route.indexOf(cur), target = i < 0 ? null : route[i + direction];
+      if (target) app.selectSite(target.id);
+    },
+  }, h('i', { class: 'pin-shadow', 'aria-hidden': 'true' }),
+  h('i', { class: 'pin-stem', 'aria-hidden': 'true' }),
+  h('span', { class: 'pin-head', 'aria-hidden': 'true' }, h('span', { class: 'pin-num' }))));
+  const el = h('div', { class: 'popup', role: 'dialog', 'aria-labelledby': 'popup-name', hidden: true }, tail, close, scroll, foot, routeButtons);
   map.append(el);
 
   let cur = null, hideTimer = 0, paidTimer = 0, dock = false, onClose = null;
@@ -28,6 +39,15 @@ export function createPopup(app, world, pins) {
   function fill(s) {
     el.classList.toggle('is-ad', !!s.ad);
     el.classList.toggle('is-spot', !!s.spot);
+    const routeIndex = route.indexOf(s);
+    routeButtons.forEach((button, i) => {
+      const target = routeIndex < 0 ? null : route[routeIndex + (i === 0 ? -1 : 1)];
+      button.hidden = !target;
+      button.disabled = !target;
+      button.querySelector('.pin-num').textContent = target ? String(target.n) : '';
+      button.setAttribute('aria-label', target ? `${i === 0 ? '前' : '次'}の観光地 ${target.n} ${target.name}` : `${i === 0 ? '前' : '次'}の観光地はありません`);
+      button.title = target ? `${target.n}. ${target.name}` : '';
+    });
     if (s.spot) {
       // 観光地（現代の地図）：番号と名前、種類と行き方、紹介文。昔の史跡がある場所は「この場所の歴史」から、その史跡の年へ移って開く
       const site = s.site ? app.byId.get(s.site) : null;
@@ -132,9 +152,10 @@ export function createPopup(app, world, pins) {
     if (away) return;
 
     const top = hy - ry, bottom = Math.max(hy + ry, P.y + 4);
+    const outset = cur.spot && matchMedia('(min-width: 761px)').matches ? ROUTE_OUTSET : 0;
     const room = { above: top - GAP - M, below: H - M - bottom - GAP, right: W - M - (hx + rx + GAP), left: hx - rx - GAP - M };
     const vertical = (sd) => sd === 'above' || sd === 'below';
-    const fits = (sd) => (vertical(sd) ? room[sd] >= natH && W - 2 * M >= w : room[sd] >= w && H - 2 * M >= natH);
+    const fits = (sd) => (vertical(sd) ? room[sd] >= natH && W - 2 * M >= w + 2 * outset : room[sd] >= w + 2 * outset && H - 2 * M >= natH);
     const order = hy > H / 2 ? ['above', 'below', 'right', 'left'] : ['below', 'above', 'right', 'left'];
     let sd = fits(side) ? side : order.find(fits);
     let maxH = 0;
@@ -150,18 +171,18 @@ export function createPopup(app, world, pins) {
 
     let x, y;
     if (vertical(sd)) {
-      x = clamp(hx - w / 2, M, W - M - w);
+      x = clamp(hx - w / 2, M + outset, W - M - outset - w);
       y = sd === 'above' ? top - GAP - ph : bottom + GAP;
       tail.style.left = `${Math.round(clamp(hx - x, TAIL, w - TAIL) - 7)}px`;
       tail.style.top = '';
     } else {
-      x = sd === 'right' ? hx + rx + GAP : hx - rx - GAP - w;
+      x = sd === 'right' ? hx + rx + GAP + outset : hx - rx - GAP - outset - w;
       y = clamp(hy - ph / 2, M, H - M - ph);
       tail.style.top = `${Math.round(clamp(hy - y, TAIL, ph - TAIL) - 7)}px`;
       tail.style.left = '';
     }
     el.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`;
-    box[0] = x; box[1] = y; box[2] = x + w; box[3] = y + ph;
+    box[0] = x - outset; box[1] = y; box[2] = x + w + outset; box[3] = y + ph;
   }
 
   // opts.dock：しっぽなしで窓の端に寄せる。opts.onClose：× を押したとき（なければ史跡の選択を外す）

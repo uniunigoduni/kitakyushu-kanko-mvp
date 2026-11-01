@@ -12,6 +12,7 @@ export function createBand(app, sites) {
   const cards = new Map();
   const eraEls = new Map();
   const anchors = []; // スライダーの位置 t と、帯の上の x の対応（t の小さい順）
+  let pendingCard = null;
 
   const byEra = new Map(ERAS.map((e) => [e.id, []]));
   // どの時代にも出る史跡（巌流島）は bandEra の時代の欄に置く
@@ -30,13 +31,13 @@ export function createBand(app, sites) {
       const thumb = s.pano && h('img', { class: 'bc-thumb', src: `assets/pano/${s.pano}_thumb.jpg`, alt: '', loading: 'lazy', decoding: 'async' });
       // 観光地のカードは、ピンと同じ番号・種類・行き方
       const btn = s.spot
-        ? h('button', { class: 'band-card is-spot', type: 'button', dataset: { id: s.id }, 'aria-label': `${s.n}. ${s.name}`, onclick: () => app.selectSite(s.id) },
+        ? h('button', { class: 'band-card is-spot', type: 'button', dataset: { id: s.id }, 'aria-label': `${s.n}. ${s.name}`, onclick: () => selectCard(s) },
           h('span', { class: 'bc-num', 'aria-hidden': 'true', text: String(s.n) }),
           h('span', { class: 'bc-text' },
             h('span', { class: 'bc-year', text: s.kind }),
             h('span', { class: 'bc-name', text: s.name }),
             s.access && h('span', { class: 'bc-meta', text: s.access })))
-        : h('button', { class: 'band-card', type: 'button', dataset: { id: s.id }, onclick: () => app.selectSite(s.id) },
+        : h('button', { class: 'band-card', type: 'button', dataset: { id: s.id }, onclick: () => selectCard(s) },
           h('span', { class: 'bc-text' },
             h('span', { class: 'bc-year', text: shortYear(s.yearLabel ?? '') }),
             h('span', { class: 'bc-name', text: s.name }),
@@ -73,9 +74,30 @@ export function createBand(app, sites) {
     }
     return xs[xs.length - 1];
   }
+  function centerCard(s) {
+    const btn = cards.get(s.id)?.btn;
+    if (!btn) return;
+    const cardRect = btn.getBoundingClientRect(), viewRect = scroller.getBoundingClientRect();
+    scroller.scrollLeft += cardRect.left + cardRect.width / 2 - (viewRect.left + viewRect.width / 2);
+  }
   function follow() {
+    if (pendingCard) { centerCard(pendingCard.site); return; }
     if (!xs.length) return;
     scroller.scrollLeft = xAt(app.t) - scroller.clientWidth / 2;
+  }
+  async function selectCard(s) {
+    const request = { site: s };
+    pendingCard = request;
+    centerCard(s);
+    try {
+      await app.selectSite(s.id);
+    } finally {
+      if (pendingCard === request) {
+        pendingCard = null;
+        if (app.selected === s) centerCard(s);
+        else follow();
+      }
+    }
   }
 
   // 縦のホイールでも横に流す
@@ -91,7 +113,14 @@ export function createBand(app, sites) {
     eraEls.get(era.id)?.classList.add('is-now');
     for (const c of cards.values()) c.btn.classList.toggle('is-now', c.s.eras.includes(era.id));
   });
-  app.on('select', (s) => { for (const c of cards.values()) c.btn.classList.toggle('is-selected', c.s === s); });
+  app.on('select', (s) => {
+    for (const c of cards.values()) c.btn.classList.toggle('is-selected', c.s === s);
+    if (pendingCard) {
+      const clicked = pendingCard.site === s;
+      pendingCard = null;
+      if (clicked) centerCard(s);
+    }
+  });
   app.on('scene', (s) => { const c = cards.get(s.id); if (c?.thumb) c.thumb.src = `assets/pano/${s.pano}_thumb.jpg`; });
   app.on('deselect', () => { for (const c of cards.values()) c.btn.classList.remove('is-selected'); });
 

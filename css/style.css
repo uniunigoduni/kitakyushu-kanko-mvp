@@ -324,6 +324,7 @@ button.dt-item { width: 100%; text-align: left; }
 /* ---------- 下の史跡帯 ---------- */
 #band {
   position: fixed; left: var(--tl-w); right: 0; bottom: 0; height: var(--band-h);
+  --band-card-w: 208px;
   z-index: 10;
 }
 .band-scroll {
@@ -337,7 +338,7 @@ button.dt-item { width: 100%; text-align: left; }
 }
 .band-scroll::-webkit-scrollbar { display: none; }
 .band-list { display: flex; align-items: stretch; gap: 8px; height: 100%; width: max-content; }
-.band-list::before, .band-list::after { content: ''; flex: 0 0 auto; width: calc(50vw - var(--tl-w) / 2 - 110px); }
+.band-list::before, .band-list::after { content: ''; flex: 0 0 auto; width: max(0px, calc((100vw - var(--tl-w) - var(--band-card-w)) / 2)); }
 .band-era {
   flex: 0 0 auto;
   display: flex; flex-direction: column; justify-content: flex-start;
@@ -352,7 +353,7 @@ button.dt-item { width: 100%; text-align: left; }
 .band-card {
   position: relative;
   flex: 0 0 auto;
-  width: 208px; height: 100%;
+  width: var(--band-card-w); height: 100%;
   display: grid; grid-template-columns: 1fr auto; gap: 10px;
   padding: 10px 10px 10px 13px;
   text-align: left;
@@ -536,6 +537,19 @@ button.dt-item { width: 100%; text-align: left; }
   transition: background-color var(--t-hover);
 }
 .popup-close:hover { background: var(--overlay); }
+.popup.is-spot { width: min(340px, calc(100% - 120px)); }
+.popup-route {
+  position: absolute; top: 50%; z-index: 2;
+  --head: 24px; --stem: 14px;
+  width: 44px; height: 44px;
+  transform: translateY(-50%);
+}
+.popup-route.is-prev { left: -52px; }
+.popup-route.is-next { right: -52px; }
+.popup-route .pin-shadow { left: calc(50% - 9px); top: 31px; }
+.popup-route .pin-stem { left: 50%; top: 19px; bottom: auto; transform: translateX(-50%); }
+.popup-route .pin-head { position: absolute; left: 50%; top: 7px; transform: translateX(-50%); }
+.popup-route:hover .pin-head { transform: translateX(-50%) scale(1.12); }
 .popup-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 12px; border-radius: var(--radius); overscroll-behavior: contain; }
 /* 画像がないときは、閉じるボタンの下に年と名前が入らないようにする（本文は全幅） */
 .popup.no-ar .popup-year, .popup.no-ar .popup-name { padding-right: 34px; }
@@ -1215,12 +1229,12 @@ body.is-stage .map-pins, body.is-stage .arrow-layer { opacity: 0; visibility: hi
 .bc-num { width: 26px; height: 26px; margin-top: 1px; font-size: 13px; }
 .band-card.is-spot.is-selected .bc-num { background: var(--strong); }
 .pin.is-spot { --head: 24px; --stem: 14px; }
-.pin.is-spot .pin-head {
+.pin.is-spot .pin-head, .popup-route .pin-head {
   display: grid; place-items: center;
   background: var(--era-accent); border: 2px solid #0c0c0c;
   box-shadow: 0 0 0 1.5px rgba(242, 242, 242, .9), 0 2px 8px rgba(0, 0, 0, .6);
 }
-.pin.is-spot .pin-head::after { display: none; }
+.pin.is-spot .pin-head::after, .popup-route .pin-head::after { display: none; }
 .pin-num { font: 700 12.5px/1 var(--sans); font-feature-settings: 'tnum'; letter-spacing: 0; color: #0c0c0c; }
 .pin.is-spot .pin-name { font-size: 13px; font-weight: 700; }
 .pin.is-spot.is-selected .pin-head { background: var(--strong); border-color: #0c0c0c; }
@@ -1278,9 +1292,13 @@ body.is-stage .map-pins, body.is-stage .arrow-layer { opacity: 0; visibility: hi
   .map-zoom button { width: 44px; height: 44px; }
   .map-credit { left: 8px; bottom: 5px; max-width: calc(100% - 64px); font-size: 9px; }
   .map-credit span { display: block; white-space: nowrap; }
-  .band-card { width: 176px; }
+  #band { --band-card-w: 176px; }
   .band-card .bc-thumb { width: 52px; }
   .popup { width: min(320px, calc(100% - 16px)); }
+  .popup.is-spot { width: min(320px, calc(100% - 16px)); padding-bottom: 52px; }
+  .popup-route { top: auto; bottom: 4px; transform: none; }
+  .popup-route.is-prev { left: 6px; }
+  .popup-route.is-next { right: 6px; }
   .pin-ad-name { max-width: 7em; }
   .ar-note-box { max-width: min(220px, 70vw); padding: 8px 11px 9px; font-size: 13px; }
   .ar-caption b { font-size: 14px; }
