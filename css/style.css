@@ -338,6 +338,7 @@ button.dt-item { width: 100%; text-align: left; }
 }
 .band-scroll::-webkit-scrollbar { display: none; }
 .band-list { display: flex; align-items: stretch; gap: 8px; height: 100%; width: max-content; }
+/* 両端の空き：帯の幅からカード 1 枚を引いた半分。端のカードも帯の真ん中まで寄せられる */
 .band-list::before, .band-list::after { content: ''; flex: 0 0 auto; width: max(0px, calc((100vw - var(--tl-w) - var(--band-card-w)) / 2)); }
 .band-era {
   flex: 0 0 auto;

@@ -20,6 +20,8 @@ export function createTimeline(app, { major = [], detail = [] }) {
   const box = document.getElementById('detail');
   const scroll = box.querySelector('.detail-scroll');
   const narrow = matchMedia('(max-width: 760px)');
+  // 年を手で動かした知らせ（下の帯は、選んだ史跡のカードに止まるのをやめて、また年に合わせて流れる）
+  const scrub = () => app.emit('scrub');
 
   // ---------- 寸法（CSS の変数から読む） ----------
   let padTop = 18, padBottom = 28, axisX = 214, height = 600, trackH = 500;
@@ -50,7 +52,7 @@ export function createTimeline(app, { major = [], detail = [] }) {
       const path = svg('path');
       const tick = h('i', { class: 'ev' });
       const item = { ev, li, path, tick, t: yearToT(ev.year), era: eraAtYear(ev.year) };
-      li.addEventListener('click', () => app.animateT(item.t));
+      li.addEventListener('click', () => { scrub(); app.animateT(item.t); });
       li.addEventListener('pointerenter', () => { li.classList.add('is-hot'); path.classList.add('is-hot'); });
       li.addEventListener('pointerleave', () => { li.classList.remove('is-hot'); path.classList.remove('is-hot'); });
       majorList.append(li);
@@ -147,6 +149,7 @@ export function createTimeline(app, { major = [], detail = [] }) {
     drag.moved = true;
     slider.classList.add('is-dragging');
     const t = tOf(localY(e));
+    scrub();
     if (Math.abs(t - app.t) > 0.03) app.animateT(t, 260); else app.setT(t);
   });
   slider.addEventListener('pointermove', (e) => {
@@ -156,11 +159,12 @@ export function createTimeline(app, { major = [], detail = [] }) {
       drag.moved = true;
       slider.classList.add('is-dragging');
     }
+    scrub();
     app.setT(tOf(localY(e)));
   });
   const endDrag = (e) => {
     if (!drag || e.pointerId !== drag.id) return;
-    if (!drag.moved && drag.li && e.type === 'pointerup') app.animateT(ERA_BY_ID[drag.li.dataset.id].tc);
+    if (!drag.moved && drag.li && e.type === 'pointerup') { scrub(); app.animateT(ERA_BY_ID[drag.li.dataset.id].tc); }
     slider.classList.remove('is-dragging');
     drag = null;
   };
@@ -169,12 +173,13 @@ export function createTimeline(app, { major = [], detail = [] }) {
   slider.addEventListener('wheel', (e) => {
     e.preventDefault();
     const d = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+    scrub();
     app.setT(app.t - d * 0.00045);
   }, { passive: false });
   slider.addEventListener('keydown', (e) => {
     const i = ERAS.indexOf(app.era);
     const step = { ArrowUp: 0.005, ArrowRight: 0.005, ArrowDown: -0.005, ArrowLeft: -0.005 }[e.key];
-    if (step) { e.preventDefault(); app.setT(app.t + step); return; }
+    if (step) { e.preventDefault(); scrub(); app.setT(app.t + step); return; }
     const to = {
       PageUp: () => ERAS[Math.min(ERAS.length - 1, i + 1)].tc,
       PageDown: () => ERAS[Math.max(0, i - 1)].tc,
@@ -183,6 +188,7 @@ export function createTimeline(app, { major = [], detail = [] }) {
     }[e.key];
     if (!to) return;
     e.preventDefault();
+    scrub();
     app.animateT(to());
   });
 
@@ -201,7 +207,7 @@ export function createTimeline(app, { major = [], detail = [] }) {
       h('span', { class: 'dt-text', text: d.text }));
     row.addEventListener('click', () => {
       if (d.siteId && app.byId.has(d.siteId)) app.selectSite(d.siteId);
-      else app.animateT(yearToT(d.year));
+      else { scrub(); app.animateT(yearToT(d.year)); }
     });
     scroll.append(row);
     rows.push({ d, row });

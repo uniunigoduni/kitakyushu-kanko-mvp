@@ -1,4 +1,6 @@
 // 下の史跡帯：左が縄文、右が現代。スライダーに合わせて横に流れ、いまの時代の史跡を真ん中に寄せる。
+// 史跡を選んだら（カード・ピン・年表・吹き出しの前後の番号・リンクのどれからでも）、そのカードを滑らかに真ん中へ寄せ、
+// 年を手で動かすか帯を手で流すまでそこに置く。
 // 現代の欄の終わりには、現代の地図に載せた観光地を番号の順に並べる
 import { ERAS, yearToT } from '../eras.js';
 import { clamp, easeInOut, h, reducedMotion } from '../util.js';
@@ -12,7 +14,8 @@ export function createBand(app, sites) {
   const cards = new Map();
   const eraEls = new Map();
   const anchors = []; // スライダーの位置 t と、帯の上の x の対応（t の小さい順）
-  let pendingCard = null, centerAnimation = null;
+  // hold：選んだ史跡。選んだあとに年が動いても（その史跡の年へ移る・特別な場面の年へ合わせる）、帯はそのカードから動かさない
+  let hold = null, centerAnimation = null;
 
   const byEra = new Map(ERAS.map((e) => [e.id, []]));
   // どの時代にも出る史跡（巌流島）は bandEra の時代の欄に置く
@@ -31,13 +34,13 @@ export function createBand(app, sites) {
       const thumb = s.pano && h('img', { class: 'bc-thumb', src: `assets/pano/${s.pano}_thumb.jpg`, alt: '', loading: 'lazy', decoding: 'async' });
       // 観光地のカードは、ピンと同じ番号・種類・行き方
       const btn = s.spot
-        ? h('button', { class: 'band-card is-spot', type: 'button', dataset: { id: s.id }, 'aria-label': `${s.n}. ${s.name}`, onclick: () => selectCard(s) },
+        ? h('button', { class: 'band-card is-spot', type: 'button', dataset: { id: s.id }, 'aria-label': `${s.n}. ${s.name}`, onclick: () => app.selectSite(s.id) },
           h('span', { class: 'bc-num', 'aria-hidden': 'true', text: String(s.n) }),
           h('span', { class: 'bc-text' },
             h('span', { class: 'bc-year', text: s.kind }),
             h('span', { class: 'bc-name', text: s.name }),
             s.access && h('span', { class: 'bc-meta', text: s.access })))
-        : h('button', { class: 'band-card', type: 'button', dataset: { id: s.id }, onclick: () => selectCard(s) },
+        : h('button', { class: 'band-card', type: 'button', dataset: { id: s.id }, onclick: () => app.selectSite(s.id) },
           h('span', { class: 'bc-text' },
             h('span', { class: 'bc-year', text: shortYear(s.yearLabel ?? '') }),
             h('span', { class: 'bc-name', text: s.name }),
@@ -45,7 +48,7 @@ export function createBand(app, sites) {
           thumb);
       const li = h('li', {}, btn);
       list.append(li);
-      cards.set(s.id, { s, btn, thumb, era: e });
+      cards.set(s.id, { s, btn, li, thumb, era: e });
       // 観光地は今年の場所なので、1 番目を「今」（最初の画面の年）に合わせて真ん中に置き、2 番目からは帯の終わりまでの間に流す
       if (s.spot && spots++) continue;
       const t = Math.max(prevT + 1e-4, s.spot ? app.tNow : Math.min(Math.max(yearToT(s.year), e.t0 + pad), e.t1 - pad));
@@ -102,26 +105,12 @@ export function createBand(app, sites) {
     animation.raf = requestAnimationFrame(step);
   }
   function follow() {
-    if (pendingCard || centerAnimation) return;
-    if (!xs.length) return;
+    if (hold || !xs.length) return;
     scroller.scrollLeft = xAt(app.t) - scroller.clientWidth / 2;
   }
-  async function selectCard(s) {
-    const request = { site: s };
-    pendingCard = request;
-    centerCard(s);
-    try {
-      await app.selectSite(s.id);
-    } finally {
-      if (pendingCard === request) {
-        pendingCard = null;
-        if (app.selected !== s) { stopCenter(); follow(); }
-      }
-    }
-  }
 
-  // 手動で帯を動かし始めたら、カードへの自動移動を止める
-  const takeControl = () => { pendingCard = null; stopCenter(); };
+  // 手で帯を流し始めたら、カードに止めるのをやめる（帯は手で動かした位置のまま。次に年が動いたら流れる）
+  const takeControl = () => { hold = null; stopCenter(); };
   scroller.addEventListener('pointerdown', takeControl);
   // 縦のホイールでも横に流す
   scroller.addEventListener('wheel', (e) => {
@@ -131,29 +120,31 @@ export function createBand(app, sites) {
     scroller.scrollLeft += e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
   }, { passive: false });
 
-  app.on('t', () => {
-    if (!pendingCard) stopCenter();
-    follow();
+  app.on('t', follow);
+  // 史跡を選んだら、そのカードを滑らかに真ん中へ（一覧にない広告は、年に合わせて流す）
+  app.on('choose', (s) => {
+    hold = cards.has(s.id) ? s : null;
+    if (hold) centerCard(s);
+    else stopCenter();
   });
+  app.on('scrub', () => { hold = null; stopCenter(); }); // スライダー・年表を手で動かしたら、また年に合わせて流す
   app.on('era', (era, prev) => {
     if (prev) eraEls.get(prev.id)?.classList.remove('is-now');
     eraEls.get(era.id)?.classList.add('is-now');
     for (const c of cards.values()) c.btn.classList.toggle('is-now', c.s.eras.includes(era.id));
   });
-  app.on('select', (s) => {
-    for (const c of cards.values()) c.btn.classList.toggle('is-selected', c.s === s);
-    if (pendingCard) {
-      const clicked = pendingCard.site === s;
-      pendingCard = null;
-      if (!clicked) stopCenter();
-    } else if (centerAnimation && centerAnimation.site !== s) {
-      stopCenter();
-    }
-  });
+  app.on('select', (s) => { for (const c of cards.values()) c.btn.classList.toggle('is-selected', c.s === s); });
   app.on('scene', (s) => { const c = cards.get(s.id); if (c?.thumb) c.thumb.src = `assets/pano/${s.pano}_thumb.jpg`; });
-  app.on('deselect', () => { for (const c of cards.values()) c.btn.classList.remove('is-selected'); });
+  app.on('deselect', (s) => {
+    for (const c of cards.values()) c.btn.classList.remove('is-selected');
+    if (hold === s) { hold = null; stopCenter(); } // 閉じたら止めるのをやめる（帯はそのまま。次に年が動いたら流れる）
+  });
 
-  const ro = new ResizeObserver(() => { measure(); follow(); });
+  const ro = new ResizeObserver(() => {
+    measure();
+    if (!hold) follow();
+    else if (!centerAnimation) scroller.scrollLeft = cardPosition(hold);
+  });
   ro.observe(scroller);
   ro.observe(list);
   measure();

@@ -195,6 +195,7 @@ function start(world, sites, arData) {
   async function selectSite(id, { from = 'list', dist } = {}) {
     const s = app.byId.get(id);
     if (!s || !s.eras.length) return; // まだ出していない自分の広告の見本
+    app.emit('choose', s); // 下の帯は、そのカードを真ん中へ寄せて、年を手で動かすまでそこに置く
     if (s.ad) dist ??= world.home.distance * 0.1; // 広告は、まわりの通りが見えるところまで寄って開く
     if (s.spot) dist ??= world.home.distance * 0.16; // 観光地は、まわりの道と広告が見えるところまで寄って開く
     if (app.selected === s) { if (stage.site === s) return; if (from !== 'map') world.view(viewFor(s, dist)); return; }
