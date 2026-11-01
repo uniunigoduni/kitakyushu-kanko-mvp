@@ -7,7 +7,7 @@ import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { GradeShader } from './grade.js';
 import { buildTerrain, buildWater, createCoastline } from './terrain.js';
-import { buildTrees, buildTown, buildRail, buildBridge } from './props.js';
+import { buildTrees, buildTown, buildRail, buildBridge, buildRoads } from './props.js';
 import { NOW_YEAR } from '../eras.js';
 import { reducedMotion } from '../util.js';
 
@@ -43,7 +43,7 @@ export const LABELS = [
   { t: '北九州空港', lat: 33.8459, lon: 131.0349, cls: 'small outer', from: 2006 },
 ];
 
-export async function createWorld(container, geo) {
+export async function createWorld(container, geo, { roads: roadData = null } = {}) {
   // ---------- 共通の uniform（地形・海・線・小物で同じものを参照する） ----------
   const shared = {
     uTime: { value: 0 },
@@ -69,7 +69,8 @@ export async function createWorld(container, geo) {
 
   const quality = { pr: Math.min(window.devicePixelRatio || 1, 1.5), bloom: true, samples: 4, slowFor: 0 };
   const hdr = renderer.extensions.has('EXT_color_buffer_float');
-  const sceneRT = new THREE.WebGLRenderTarget(4, 4, { type: hdr ? THREE.HalfFloatType : THREE.UnsignedByteType, samples: quality.samples });
+  // stencilBuffer：現代の道（半透明の線）のつなぎ目が重なって濃くならないように使う（props.js buildRoads）
+  const sceneRT = new THREE.WebGLRenderTarget(4, 4, { type: hdr ? THREE.HalfFloatType : THREE.UnsignedByteType, samples: quality.samples, stencilBuffer: true });
   const bloom = new UnrealBloomPass(new THREE.Vector2(4, 4), 0.7, 0.45, 0.85);
   const bloomQuad = new FullScreenQuad(null);
   const grade = new THREE.ShaderMaterial({
@@ -123,11 +124,13 @@ export async function createWorld(container, geo) {
   const coastline = createCoastline(geo, shared);
   const terrain = buildTerrain(geo, shared);
   const water = buildWater(geo, shared);
-  const trees = buildTrees(geo, shared);
-  const town = buildTown(geo, shared);
+  // 現代の道。道の上には木も家も置かない（道が建物に隠れて途切れないように）
+  const roads = buildRoads(geo, shared, roadData);
+  const trees = buildTrees(geo, shared, { clear: roads.userData.clear });
+  const town = buildTown(geo, shared, roads.userData.clear);
   const rail = buildRail(geo, shared);
   const bridge = buildBridge(geo);
-  scene.add(water, terrain, coastline.group, trees, town, rail, bridge);
+  scene.add(water, terrain, coastline.group, trees, town, roads, rail, bridge);
   // 特別な場面の船・汽車・炎などはここに入れる
   const fxRoot = new THREE.Group();
   fxRoot.name = 'fx';
@@ -402,6 +405,29 @@ export async function createWorld(container, geo) {
   // 年を大きく飛ばしたあと（最初の画面など）に、海岸線をその場で合わせる
   function settleCoast() { coastTo(coast.to, true); }
 
+  // 現代の道：年を動かしている途中で現代を通り過ぎるたびにちらつかないよう、現代に着いて少し待ってから、ゆっくり出す。
+  // 現代を離れるときはすぐ消す
+  const ROAD_WAIT = 0.55, ROAD_IN = 0.7, ROAD_OUT = 0.2;
+  const road = { on: false, v: 0, wait: 0, r: -1 };
+  function setRoads(on) {
+    if (on === road.on) return;
+    road.on = on;
+    road.wait = on && road.v === 0 && !reducedMotion() ? ROAD_WAIT : 0;
+    wake();
+  }
+  function stepRoads(dt) {
+    if (road.on && road.wait > 0) { road.wait -= dt; wake(); return; }
+    const to = road.on ? 1 : 0;
+    const r = controls.distance / home.distance;
+    if (road.v === to && (to === 0 || Math.abs(r - road.r) < 1e-3)) return;
+    if (road.v !== to) {
+      road.v = reducedMotion() ? to : to > road.v ? Math.min(1, road.v + dt / ROAD_IN) : Math.max(0, road.v - dt / ROAD_OUT);
+      wake();
+    }
+    road.r = r;
+    roads.userData.show(road.v * road.v * (3 - 2 * road.v), r);
+  }
+
   let year = NOW_YEAR;
   function setYear(y) {
     if (y === year) return;
@@ -542,6 +568,7 @@ export async function createWorld(container, geo) {
     if (moved) { lastMove = now; updateShadow(now); }
     fitNear();
     stepCoast(dt);
+    stepRoads(dt);
     for (const f of hooks) f(dt, time);
     updateLabels();
     // 動きが止まって 2 秒たったら 1 コマおきに描く
@@ -727,11 +754,11 @@ export async function createWorld(container, geo) {
   renderer.setAnimationLoop(loop);
 
   const world = {
-    THREE, geo, renderer, scene, camera, controls, shared, fxRoot, sun, hemi, rail, labelScene, pinScene,
+    THREE, geo, renderer, scene, camera, controls, shared, fxRoot, sun, hemi, rail, roads, labelScene, pinScene,
     layers: { labels: labelRenderer.domElement, pins: pinRenderer.domElement },
     get year() { return year; }, get size() { return { W, H }; },
     get home() { return home; }, get quality() { return quality; }, get safe() { return { ...safe }; },
-    setYear, settleCoast, setNight, setFx, setSafeArea, focusShadow,
+    setYear, settleCoast, setNight, setFx, setSafeArea, focusShadow, setRoads,
     project, toGround, at, view, goHome, zoom, canZoom, wake, pause,
     glow, takeover, precompile, setHole, setLight, get fx() { return { ...fx }; },
     onFrame(f) { hooks.add(f); return () => hooks.delete(f); },

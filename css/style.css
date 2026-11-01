@@ -108,6 +108,37 @@ body.is-intro .map-zoom { opacity: 0; visibility: hidden; }
 .map-zoom button:focus-visible { outline-offset: -3px; }
 .map-zoom svg { width: 18px; height: 18px; }
 
+/* 年を動かしている間だけ、地図の真ん中に大きく薄く出す年（js/ui/ticker.js）。数字は幅のそろった書体で、数えても横に揺れない */
+.year-ticker {
+  position: absolute; left: 50%; top: 50%; z-index: 0;
+  transform: translate(-50%, -50%);
+  display: flex; align-items: baseline;
+  color: rgba(255, 255, 255, .3);
+  text-shadow: 0 2px 18px rgba(0, 0, 0, .28);
+  white-space: nowrap;
+  pointer-events: none; user-select: none;
+  opacity: 0;
+  transition: opacity 700ms ease;
+}
+.year-ticker.is-on { opacity: 1; transition-duration: 90ms; }
+.ticker-num { font: 500 clamp(64px, 9vw, 132px)/1 var(--mono); font-feature-settings: 'tnum'; letter-spacing: -.02em; }
+.ticker-pre, .ticker-unit { font: 700 clamp(22px, 2.9vw, 42px)/1 var(--sans); }
+.ticker-pre { margin-right: .2em; }
+.ticker-unit { margin-left: .14em; }
+
+/* 地図のデータの出典（左下の隅に小さく） */
+.map-credit {
+  position: absolute; left: 10px; bottom: 6px; z-index: 1;
+  max-width: calc(100% - 80px);
+  margin: 0;
+  font-size: 10px; line-height: 1.45;
+  color: rgba(255, 255, 255, .5);
+  text-shadow: 0 0 3px rgba(0, 0, 0, .8);
+  pointer-events: none; user-select: none;
+}
+.map-credit span { display: inline-block; margin-right: .9em; }
+body.is-intro .map-credit { opacity: 0; }
+
 /* 地名 */
 .lbl {
   font: 600 13px/1 var(--serif);
@@ -1185,6 +1216,8 @@ body.is-stage .map-pins, body.is-stage .arrow-layer { opacity: 0; visibility: hi
   #detail { display: none; }
   .map-zoom { right: 8px; bottom: 8px; }
   .map-zoom button { width: 44px; height: 44px; }
+  .map-credit { left: 8px; bottom: 5px; max-width: calc(100% - 64px); font-size: 9px; }
+  .map-credit span { display: block; white-space: nowrap; }
   .band-card { width: 176px; }
   .band-card .bc-thumb { width: 52px; }
   .popup { width: min(320px, calc(100% - 16px)); }

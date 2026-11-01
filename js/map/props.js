@@ -50,7 +50,8 @@ function depthMaterialWith(patch, key) {
 }
 
 // ---------- 木 ----------
-export function buildTrees(geo, shared, count = 9000) {
+// clear(x, z) が true の所（現代の道の上）には植えない。rand() の並びを変えないよう、選んだあとで外す
+export function buildTrees(geo, shared, { clear = null, count = 9000 } = {}) {
   const rand = rng(11);
   const noise = new SimplexNoise({ random: rand });
   const townYear = townYearFn(geo);
@@ -77,6 +78,7 @@ export function buildTrees(geo, shared, count = 9000) {
     const kind = h > 160 ? (rand() < 0.7 ? 'conifer' : 'broad') : rand() < 0.35 ? 'conifer' : 'broad';
     items[kind].push({ x, z, y: geo.heightAt(x, z) - 0.25, s: 0.8 + rand() * 0.55, r: rand() * Math.PI * 2, die, tone: rand() });
   }
+  if (clear) for (const kind of ['conifer', 'broad']) items[kind] = items[kind].filter((t) => !clear(t.x, t.z));
 
   const group = new THREE.Group();
   group.name = 'trees';
@@ -217,12 +219,13 @@ function planTown(geo) {
   }
   // 門司港レトロハイマート（1999、127 m）
   const [tx, tz] = geo.toXZ(130.9632, 33.9458);
-  out.push({ x: tx, z: tz, rot: 0.62, kind: 'block', born: 1997, y2: 1997, w: 2.8, d: 2.3, h1: 0, h2: 127 * Y_PER_M, wall: '#d8d3ca', wall2: '#d8d3ca' });
+  out.push({ x: tx, z: tz, rot: 0.62, kind: 'block', born: 1997, y2: 1997, w: 2.8, d: 2.3, h1: 0, h2: 127 * Y_PER_M, wall: '#d8d3ca', wall2: '#d8d3ca', keep: true });
   return out;
 }
 
-export function buildTown(geo, shared) {
-  const plan = planTown(geo);
+// clear(x, z) が true の所（現代の道の上）には建てない。rand() の並びを変えないよう、決めたあとで外す
+export function buildTown(geo, shared, clear = null) {
+  const plan = clear ? planTown(geo).filter((b) => b.keep || !clear(b.x, b.z)) : planTown(geo);
   const group = new THREE.Group();
   group.name = 'town';
   const vCommon = 'attribute float aBorn; attribute float aEnd; attribute vec3 aWall; attribute float aRoof; attribute float aStep; uniform vec3 uRoofCol; uniform float uCoast; ' + HOLE_GLSL + ' varying vec3 vBCol;';
@@ -312,6 +315,108 @@ export function buildRail(geo, shared) {
   // 駅から dist（単位）までの線を描かない（0 で全部に戻す）
   group.userData.trim = (dist) => { for (const l of [base, dash]) l.geometry.instanceCount = dist > 0 ? Math.max(0, n - Math.ceil(dist / 2)) : Infinity; };
   return group;
+}
+
+// ---------- 現代の道（© OpenStreetMap contributors。tools/build_roads.py で作った data/roads.json） ----------
+// 現代の地図と観光マップにだけ出す。年を動かすと現代だけ道が現れるので、目立ちすぎない明るい灰色にする。
+// 太さは画面の px で、寄るほど太く（width → max）。町の中の細い道（minor）は寄ったときだけ出す。
+// clear は町並み・木を置かない帯の幅（道の中心から、単位）
+const ROADS = {
+  major: { width: 1.7, max: 5, opacity: 0.62, clear: 1.7 },
+  mid: { width: 1.2, max: 3.6, opacity: 0.5, clear: 1.3 },
+  minor: { width: 0.9, max: 2.4, opacity: 0.42 },
+};
+const ROAD_COLOR = 0xe4ddd0;
+// 描いている地形の面（三角形）の上の高さ。buildTerrain と同じ対角線で割って求める
+// （heightAt の双一次補間のままだと、急な斜面で面の下にもぐって線が途切れる）
+function surfaceAt(geo, x, z) {
+  const { nx, ny, y: Y } = geo;
+  const fx = Math.min(Math.max(geo.gx(x), 0), nx - 1.001), fz = Math.min(Math.max(geo.gz(z), 0), ny - 1.001);
+  const i = Math.floor(fx), j = Math.floor(fz), u = fx - i, v = fz - j;
+  const a = j * nx + i, b = a + 1, d = a + nx, e = d + 1;
+  if (Math.abs(Y[a] - Y[e]) < Math.abs(Y[b] - Y[d])) {
+    return u > v ? Y[a] + (Y[b] - Y[a]) * u + (Y[e] - Y[b]) * v : Y[a] + (Y[e] - Y[d]) * u + (Y[d] - Y[a]) * v;
+  }
+  return u + v <= 1 ? Y[a] + (Y[b] - Y[a]) * u + (Y[d] - Y[a]) * v : Y[e] + (Y[d] - Y[e]) * (1 - u) + (Y[b] - Y[e]) * (1 - v);
+}
+export function buildRoads(geo, shared, data) {
+  const group = new THREE.Group();
+  group.name = 'roads';
+  group.visible = false;
+  const lines = {};
+  const keepOut = [];
+  for (const [k, st] of Object.entries(ROADS)) {
+    const pos = [];
+    for (const flat of data?.[k] ?? []) {
+      // m（地形の中心から、2 点目からは前の点との差）→ 単位
+      const pts = [flat[0] / UNIT, flat[1] / UNIT];
+      for (let i = 2; i < flat.length; i += 2) pts.push(pts[i - 2] + flat[i] / UNIT, pts[i - 1] + flat[i + 1] / UNIT);
+      if (st.clear) keepOut.push({ pts, r: st.clear });
+      // 地面の起伏に沿うよう、1.5 単位ごとに区切って高さを取る
+      const yAt = (x, z) => Math.max(0, surfaceAt(geo, x, z)) + 0.6;
+      for (let i = 2; i < pts.length; i += 2) {
+        const ax = pts[i - 2], az = pts[i - 1], bx = pts[i], bz = pts[i + 1];
+        const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / 1.5));
+        let px = ax, pz = az, py = yAt(ax, az);
+        for (let s = 1; s <= n; s++) {
+          const qx = ax + ((bx - ax) * s) / n, qz = az + ((bz - az) * s) / n, qy = yAt(qx, qz);
+          pos.push(px, py, pz, qx, qy, qz);
+          px = qx; pz = qz; py = qy;
+        }
+      }
+    }
+    if (!pos.length) continue;
+    const mat = fadeLineMaterial({ color: ROAD_COLOR, linewidth: st.width, transparent: true, opacity: 0, depthWrite: false }, shared, 'road-' + k);
+    // 線のつなぎ目が重なって数珠のように濃くならないよう、同じ段の線は 1 画素に 1 回だけ塗る（ステンシル）
+    Object.assign(mat, { stencilWrite: true, stencilRef: Object.keys(lines).length + 1, stencilFunc: THREE.NotEqualStencilFunc, stencilZPass: THREE.ReplaceStencilOp });
+    const line = new LineSegments2(new LineSegmentsGeometry().setPositions(pos), mat);
+    line.renderOrder = 3;
+    lines[k] = line;
+    group.add(line);
+  }
+  group.userData.clear = keepOut.length ? roadClear(keepOut) : null;
+  // v：出し入れ（0〜1）。r：いつもの視点からの寄り具合（距離 ÷ いつもの距離）
+  group.userData.show = (v, r) => {
+    group.visible = v > 0;
+    const zoom = 1 / Math.sqrt(Math.max(r, 0.01));
+    for (const [k, line] of Object.entries(lines)) {
+      const st = ROADS[k];
+      const near = k === 'minor' ? 1 - THREE.MathUtils.smoothstep(r, 0.22, 0.4) : 1;
+      line.material.opacity = st.opacity * v * near;
+      line.material.linewidth = Math.min(st.max, st.width * zoom);
+      line.visible = line.material.opacity > 0.004;
+    }
+  };
+  return group;
+}
+
+// 道の中心から r（単位）より近いかどうかを、1 単位ごとの格子に印をつけて引けるようにする
+function roadClear(list) {
+  let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
+  for (const { pts, r } of list) for (let i = 0; i < pts.length; i += 2) {
+    x0 = Math.min(x0, pts[i] - r); x1 = Math.max(x1, pts[i] + r);
+    z0 = Math.min(z0, pts[i + 1] - r); z1 = Math.max(z1, pts[i + 1] + r);
+  }
+  x0 = Math.floor(x0); z0 = Math.floor(z0);
+  const w = Math.ceil(x1) - x0 + 1, hh = Math.ceil(z1) - z0 + 1;
+  const grid = new Uint8Array(w * hh);
+  for (const { pts, r } of list) {
+    for (let i = 2; i < pts.length; i += 2) {
+      const ax = pts[i - 2], az = pts[i - 1], dx = pts[i] - ax, dz = pts[i + 1] - az;
+      const L2 = dx * dx + dz * dz || 1e-9;
+      const i0 = Math.floor(Math.min(ax, ax + dx) - r) - x0, i1 = Math.ceil(Math.max(ax, ax + dx) + r) - x0;
+      const j0 = Math.floor(Math.min(az, az + dz) - r) - z0, j1 = Math.ceil(Math.max(az, az + dz) + r) - z0;
+      for (let j = j0; j <= j1; j++) for (let k = i0; k <= i1; k++) {
+        const px = x0 + k - ax, pz = z0 + j - az;
+        const t = Math.max(0, Math.min(1, (px * dx + pz * dz) / L2));
+        if (Math.hypot(px - dx * t, pz - dz * t) < r) grid[j * w + k] = 1;
+      }
+    }
+  }
+  return (x, z) => {
+    const i = Math.round(x) - x0, j = Math.round(z) - z0;
+    return i >= 0 && j >= 0 && i < w && j < hh && grid[j * w + i] === 1;
+  };
 }
 
 // ---------- 関門橋（1973）：全長 1068 m、中央径間 712 m、主塔 141 m、桁の高さ 約61 m ----------

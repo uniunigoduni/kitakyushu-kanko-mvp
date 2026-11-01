@@ -10,6 +10,7 @@ import { createBand } from './ui/band.js';
 import { createPins, isToday } from './ui/pins.js';
 import { createPopup } from './ui/popup.js';
 import { createTravel } from './ui/travel.js';
+import { createTicker } from './ui/ticker.js';
 import { createAR } from './ar.js';
 import { createPay } from './pay.js';
 import { createAccount } from './account.js';
@@ -54,7 +55,7 @@ function fail(message, err) {
 }
 
 let geo, world;
-const [geoResult, sitesData, timelineRaw, arData, dummyData, adsData] = await Promise.all([
+const [geoResult, sitesData, timelineRaw, arData, dummyData, adsData, roadsData] = await Promise.all([
   loadGeo('data/').catch((err) => err),
   loadJSON('data/sites.json', { sites: [] }),
   loadJSON('data/timeline.json', null),
@@ -63,13 +64,15 @@ const [geoResult, sitesData, timelineRaw, arData, dummyData, adsData] = await Pr
   loadJSON('data/dummy_pins.json', { sites: [] }),
   // ピン型の広告の見本（架空のお店。現代の地図にだけ出す）
   loadJSON('data/ads.json', { ads: [] }),
+  // 現代の道（© OpenStreetMap contributors。tools/build_roads.py）。現代の地図と観光マップにだけ出す
+  loadJSON('data/roads.json', null),
 ]);
 if (geoResult instanceof Error) {
   fail('地図のデータを読み込めませんでした。ページを読み込み直してください。', geoResult);
 } else {
   geo = geoResult;
   try {
-    world = await createWorld(document.getElementById('map'), geo);
+    world = await createWorld(document.getElementById('map'), geo, { roads: roadsData });
   } catch (err) {
     fail('この端末では立体の地図を表示できませんでした。別のブラウザか、パソコンで開いてください。', err);
   }
@@ -234,6 +237,7 @@ function start(world, sites, arData) {
   const pins = createPins(app, world, sites);
   const popup = createPopup(app, world, pins);
   const travel = createTravel(app, world);
+  createTicker(app, world);
   const stage = createStage(app, world, pins, popup);
   createZoom(world, popup);
   const ar = createAR(app, world, arData);
@@ -262,6 +266,8 @@ function start(world, sites, arData) {
   });
   // 吹き出しを開いたら、360度の画像を先に読み込んでおく
   app.on('select', (s) => { if (s.pano) ar.preload(s.pano).catch(() => {}); });
+  // 現代の道は現代の地図にだけ出す（年を動かしている途中では出さず、着いて少し待ってから）
+  app.on('era', (era) => world.setRoads(era.id === 'now'));
   createBand(app, sites.filter((s) => !s.dummy && !s.ad)); // ダミーのピンと広告は一覧に出さない
   createTimeline(app, { major, detail });
   createFlavor(app);
