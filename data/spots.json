@@ -47,8 +47,28 @@
    ]
   },
   {
-   "id": "spot_moji_zeikan",
+   "id": "spot_sakaemachi",
    "n": 3,
+   "name": "栄町銀天街",
+   "kind": "商店街",
+   "lat": 33.9452,
+   "lon": 130.9655,
+   "access": "門司港駅から徒歩約5分",
+   "summary": "桜町通りから桟橋通りまで約300m続く商店街で、1957年に約250mのアーケードがかかった。老舗から新しい店まで並び、地元の人の暮らしに根づいた通りに昭和の雰囲気が残る。",
+   "sources": [
+    {
+     "title": "北九州市観光情報サイト 北九州パレット「栄町銀天街」",
+     "url": "https://kitakyushucity.guide/spots/detail/80199bbe-9a2f-4ced-b600-52c539df2e74"
+    },
+    {
+     "title": "地域観光資源の多言語解説文データベース「栄町銀天街」（関門インバウンド受入協議会、2023年度）",
+     "url": "https://www.mlit.go.jp/tagengo-db/R5-00686.html"
+    }
+   ]
+  },
+  {
+   "id": "spot_moji_zeikan",
+   "n": 4,
    "name": "旧門司税関",
    "kind": "洋館",
    "lat": 33.9477,
@@ -66,18 +86,24 @@
   },
   {
    "id": "spot_nishikaigan",
-   "n": 4,
+   "n": 5,
    "name": "西海岸緑地",
    "kind": "緑地",
    "lat": 33.9443,
    "lon": 130.957,
    "access": "門司港駅から徒歩約5分",
+   "summary": "門司港の西海岸に、港の整備事業でつくられた緑地。海沿いの遊歩道とサイクリングロードになっている。",
    "site": "dairen_koro",
-   "sources": []
+   "sources": [
+    {
+     "title": "国土交通省 港湾局の港湾整備の事例（北九州港・めかり、PDF）",
+     "url": "https://www.mlit.go.jp/kowan/koukazirei/pdf/02-03-25.pdf"
+    }
+   ]
   },
   {
    "id": "spot_norfolk",
-   "n": 5,
+   "n": 6,
    "name": "ノーフォーク広場",
    "kind": "広場",
    "lat": 33.9573,
@@ -96,7 +122,7 @@
   },
   {
    "id": "spot_ubuyui",
-   "n": 6,
+   "n": 7,
    "name": "産湯井（平家の一杯水）",
    "kind": "伝承",
    "lat": 33.95896,
@@ -112,47 +138,70 @@
   },
   {
    "id": "spot_kyodai",
-   "n": 7,
+   "n": 8,
    "name": "橋台下広場",
    "kind": "広場",
    "lat": 33.9594,
    "lon": 130.9626,
+   "access": "和布刈神社のそば",
+   "summary": "関門橋の門司側の橋台の下にある、和布刈公園の広場。関門トンネル人道の入口がすぐそばにあり、潮の流れや関門橋、行き交う船を間近に眺められる。",
    "site": "kanmon_bridge",
-   "sources": []
+   "sources": [
+    {
+     "title": "北九州市の公園の案内（門司区・和布刈公園、PDF）",
+     "url": "https://www.city.kitakyushu.lg.jp/files/000759443.pdf"
+    }
+   ]
   },
   {
    "id": "spot_ishidoro",
-   "n": 8,
+   "n": 9,
    "name": "石灯籠（和布刈神社）",
    "kind": "灯籠",
    "lat": 33.9603,
    "lon": 130.962,
-   "summary": "和布刈神社の社殿の前、石段を下りた海岸に置かれた石灯籠。旧門司の豪商・永井力五郎の寄進で建てられた。",
+   "access": "門司港駅から徒歩約25分",
+   "summary": "和布刈神社の社殿の前、石段を下りた海岸に立つ灯籠。寄進したのは旧門司の豪商・永井力五郎とする説明と、約400年前の氏子とする説明がある。",
    "site": "mekari_jinja",
    "sources": [
     {
      "title": "北九州の史跡探訪「和布刈地区」",
      "url": "https://sisekib.kitahistory.net/mo-mekari.htm"
+    },
+    {
+     "title": "クロスロードふくおか「和布刈神社」",
+     "url": "https://www.crossroadfukuoka.jp/spot/13062"
+    },
+    {
+     "title": "和布刈神社「交通のご案内」",
+     "url": "https://mekarijinja.com/access.html"
     }
    ]
   },
   {
    "id": "spot_kancho",
-   "n": 9,
+   "n": 10,
    "name": "観潮テラス",
    "kind": "展望",
    "lat": 33.96089,
    "lon": 130.96233,
+   "summary": "関門橋の下、関門海峡でいちばん狭い早鞆ノ瀬戸に面した門司側のテラス。流れる潮や渦を巻く潮と、対岸の下関・火の山の下に立つ潮流計がよく見える。",
    "site": "kanmon_road_tunnel",
-   "sources": []
+   "sources": [
+    {
+     "title": "関門時間旅行（北九州市・下関市）「【Episode4】ロケハン篇。平家物語ゆかりの地に実際行ってみよう！」",
+     "url": "https://kanmontime.com/s2-episode4/"
+    }
+   ]
   },
   {
    "id": "spot_mekari_park",
-   "n": 10,
+   "n": 11,
    "name": "めかり公園（和布刈公園）",
    "kind": "公園",
    "lat": 33.95821,
    "lon": 130.96648,
+   "access": "西鉄バス「和布刈公園前」下車",
    "summary": "古城山の一帯に広がる公園。第二展望台には源平の壇ノ浦の合戦を有田焼の陶板で描いた壁画があり、春には約1,400本の桜が咲く。",
    "site": "moji_jo",
    "sources": [
@@ -172,7 +221,7 @@
   },
   {
    "id": "spot_mekari_pa",
-   "n": 11,
+   "n": 12,
    "name": "めかりPA（上り線展望台）",
    "kind": "展望台",
    "lat": 33.95852,
