@@ -53,6 +53,9 @@ export async function createWorld(container, geo) {
     uNight: { value: 0 },
     uSunDir: { value: SUN_DIR.clone() },
     uFlow: { value: new THREE.Vector4() },
+    // 特別な場面の模型を置くところ：線分（a.x, a.z, b.x, b.z）から uHoleR より近い木・建物を消す
+    uHole: { value: new THREE.Vector4() },
+    uHoleR: { value: 0 },
   };
 
   // ---------- 描画の準備 ----------
@@ -106,6 +109,15 @@ export async function createWorld(container, geo) {
   sun.shadow.normalBias = 0.3;
   sun.shadow.radius = 2.5;
   scene.add(hemi, sun, sun.target);
+  // 特別な場面の炎・爆発の光。足したり外したりすると全部の材質を組み立て直すことになるので、
+  // はじめから2つ置いておき、使わない間は明るさ 0 にしておく
+  const glow = [0, 1].map(() => {
+    const l = new THREE.PointLight(0xff8a3c, 0, 60, 2);
+    l.position.set(0, -500, 0);
+    scene.add(l);
+    return l;
+  });
+  const sunColor = sun.color.clone(), hemiColor = hemi.color.clone();
 
   // 時代の海岸線を先に作る（地形・海・町が、その uniform を使う）
   const coastline = createCoastline(geo, shared);
@@ -183,7 +195,7 @@ export async function createWorld(container, geo) {
   // ---------- 画面の大きさ・安全な範囲（スライダー・タイトル・帯に隠れない所） ----------
   let W = 1, H = 1;
   const safe = { left: 0, top: 0, right: 0, bottom: 0 };
-  const fx = { tilt: 2, bloom: 0, focus: null };
+  const fx = { tilt: 2, bloom: 0, threshold: 0.85, focus: null };
   const home = { target: new THREE.Vector3(), polar: 0.72, azimuth: 0, distance: 2200 };
   let atHome = true;
 
@@ -420,17 +432,19 @@ export async function createWorld(container, geo) {
     if (atHome) controls.setLookAt(...homePosition(), home.target.x, home.target.y, home.target.z, false);
     wake();
   }
-  // 特別な場面：影を場面の範囲だけに絞り、毎コマ描く（動く船や汽車の影のため）
-  function focusShadow(box) {
+  // 特別な場面：影を場面の範囲だけに絞る（細かく落ちる）。live なら毎コマ描き直す
+  function focusShadow(box, live = false) {
     if (box) {
       shadowState.pinned = box;
       fitShadow(box.x0, box.x1, box.z0, box.z1, box.y0 ?? -6, box.y1 ?? 60);
-      renderer.shadowMap.autoUpdate = true;
+      renderer.shadowMap.autoUpdate = live;
+      renderer.shadowMap.needsUpdate = true;
     } else {
       shadowState.pinned = null;
       shadowState.key = '';
       renderer.shadowMap.autoUpdate = false;
-      shadowState.dirty = true;
+      fitShadowToView();
+      renderer.shadowMap.needsUpdate = true;
     }
   }
 
@@ -469,7 +483,7 @@ export async function createWorld(container, geo) {
     const oldAlpha = renderer.getClearAlpha();
     renderer.setClearColor(0x000000, 0);
     b.highPassUniforms.tDiffuse.value = tex;
-    b.highPassUniforms.luminosityThreshold.value = b.threshold;
+    b.highPassUniforms.luminosityThreshold.value = fx.threshold;
     bloomQuad.material = b.materialHighPassFilter;
     renderer.setRenderTarget(b.renderTargetBright); renderer.clear(); bloomQuad.render(renderer);
     let input = b.renderTargetBright;
@@ -550,6 +564,80 @@ export async function createWorld(container, geo) {
     if (!on) { last = performance.now(); wake(); }
   }
 
+  // ---------- 特別な場面の間は、地図の操作を場面に渡す ----------
+  // カメラは場面が動かす。ドラッグしたら 'pan'、ホイール・2本指・＋／−なら 'zoom' を1回だけ知らせる。
+  // 知らせたあとも、場面が手放すまで（戻る動きの間）は操作を止めておく（トラックパッドの惰性で地図が動かないように）
+  let guard = null;
+  function takeover(onInput) {
+    guard?.end();
+    const el = renderer.domElement, ac = new AbortController(), on = { signal: ac.signal };
+    const g = { fired: false, pts: new Map(), pinch: null };
+    const fire = (kind) => { if (g.fired) return; g.fired = true; onInput(kind); };
+    const pinchOf = () => {
+      const [a, b] = [...g.pts.values()];
+      return { d: Math.hypot(a.x - b.x, a.y - b.y), x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    };
+    controls.enabled = false;
+    // camera-controls は止めると touch-action を空に戻すので、スマホで画面ごと動かないように付け直す
+    el.style.touchAction = 'none';
+    // 地図とピン・地名の上のホイールは、地図の窓で先に受け止める（吹き出しの中を流すホイールはそのまま）
+    const onMap = (t) => t === el || pinRenderer.domElement.contains(t) || labelRenderer.domElement.contains(t);
+    container.addEventListener('wheel', (e) => {
+      if (!onMap(e.target)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      fire('zoom');
+    }, { ...on, capture: true, passive: false });
+    el.addEventListener('pointerdown', (e) => {
+      g.pts.set(e.pointerId, { x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY });
+      g.pinch = g.pts.size === 2 ? pinchOf() : null;
+    }, on);
+    addEventListener('pointermove', (e) => {
+      const p = g.pts.get(e.pointerId);
+      if (!p) return;
+      p.x = e.clientX; p.y = e.clientY;
+      if (g.pts.size === 1) { if (Math.hypot(p.x - p.x0, p.y - p.y0) > 6) fire('pan'); return; }
+      if (!g.pinch) return;
+      // 2本指：指の間が開いた・閉じたなら寄り引き、2本そろって動いたなら移動
+      const q = pinchOf();
+      if (Math.abs(q.d - g.pinch.d) > 14) fire('zoom');
+      else if (Math.hypot(q.x - g.pinch.x, q.y - g.pinch.y) > 14) fire('pan');
+    }, on);
+    const up = (e) => { g.pts.delete(e.pointerId); g.pinch = null; };
+    addEventListener('pointerup', up, on);
+    addEventListener('pointercancel', up, on);
+    g.input = fire;
+    g.end = () => {
+      if (guard !== g) return;
+      ac.abort();
+      guard = null;
+      controls.enabled = true;
+    };
+    guard = g;
+    return g.end;
+  }
+  // 場面の小物を、地図に入れる前に組み立てておく（入れた瞬間に止まらないように）
+  async function precompile(obj) {
+    renderer.setRenderTarget(sceneRT);
+    const p = renderer.compileAsync(obj, camera, scene);
+    renderer.setRenderTarget(null);
+    await p.catch(() => {});
+  }
+  // 木と町の建物を、線分 a → b（[x, z]）から r より近い所だけ消す（b を省くと円。null で戻す）
+  function setHole(c) {
+    if (c) shared.uHole.value.set(c.a[0], c.a[1], (c.b ?? c.a)[0], (c.b ?? c.a)[1]);
+    shared.uHoleR.value = c ? c.r : 0;
+    shadowState.dirty = true;
+    renderer.shadowMap.needsUpdate = true;
+    wake();
+  }
+  // 場面の光の色（null でいつもの色）
+  function setLight(o) {
+    sun.color.copy(o?.sun ?? sunColor);
+    hemi.color.copy(o?.sky ?? hemiColor);
+    wake();
+  }
+
   controls.addEventListener('controlstart', () => { atHome = false; wake(); });
   controls.addEventListener('rest', () => updateShadow(performance.now(), true));
   renderer.domElement.addEventListener('wheel', () => { atHome = false; }, { passive: true });
@@ -582,6 +670,7 @@ export async function createWorld(container, geo) {
   // ボタンで寄る・引く（k < 1 で寄る）。続けて押したときは、動いている途中でも行き先の距離から数える
   const _sph = new THREE.Spherical();
   function zoom(k, smooth = true) {
+    if (guard) { guard.input('zoom'); return Promise.resolve(); }
     atHome = false;
     wake();
     const r = controls.getSpherical(_sph).radius;
@@ -590,6 +679,7 @@ export async function createWorld(container, geo) {
   }
   // その向きにまだ動けるか（行き先が近さ・遠さの端に着いていたら false。寄る向きは、山にぶつかるときも false）
   function canZoom(k) {
+    if (guard) return true;
     const r = controls.getSpherical(_sph).radius;
     if (k >= 1) return r < controls.maxDistance - 0.5;
     return r > controls.minDistance + 0.5 && clearK(controls.getPosition(_c0), controls.getTarget(_t0), Math.max(k, controls.minDistance / r)) < 1;
@@ -637,12 +727,13 @@ export async function createWorld(container, geo) {
   renderer.setAnimationLoop(loop);
 
   const world = {
-    THREE, geo, renderer, scene, camera, controls, shared, fxRoot, sun, hemi, labelScene, pinScene,
+    THREE, geo, renderer, scene, camera, controls, shared, fxRoot, sun, hemi, rail, labelScene, pinScene,
     layers: { labels: labelRenderer.domElement, pins: pinRenderer.domElement },
     get year() { return year; }, get size() { return { W, H }; },
     get home() { return home; }, get quality() { return quality; }, get safe() { return { ...safe }; },
     setYear, settleCoast, setNight, setFx, setSafeArea, focusShadow,
     project, toGround, at, view, goHome, zoom, canZoom, wake, pause,
+    glow, takeover, precompile, setHole, setLight, get fx() { return { ...fx }; },
     onFrame(f) { hooks.add(f); return () => hooks.delete(f); },
     distance: () => controls.distance,
     // f() は地名を消したい画面上の四角 [x0, y0, x1, y1] の配列を返す

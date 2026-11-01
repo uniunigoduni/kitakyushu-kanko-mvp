@@ -14,7 +14,7 @@ import { NOW_YEAR } from '../eras.js';
 const srgb = (h) => new THREE.Color(h);
 
 // 頂点ごとに色をつけたジオメトリ
-function painted(geom, color) {
+export function painted(geom, color) {
   const g = geom.index ? geom.toNonIndexed() : geom;
   const c = srgb(color);
   const n = g.attributes.position.count;
@@ -24,6 +24,13 @@ function painted(geom, color) {
   g.deleteAttribute('uv');
   return g;
 }
+
+// 特別な場面で模型を置くところ：線分 uHole（a.xz → b.xz）から uHoleR より近い木・建物を消す（uHoleR = 0 なら何も消さない）
+const HOLE_GLSL = `uniform vec4 uHole; uniform float uHoleR;
+  float outsideHole(vec2 p) {
+    vec2 a = p - uHole.xy, d = uHole.zw - uHole.xy;
+    return step(uHoleR, length(a - d * clamp(dot(a, d) / max(dot(d, d), 1e-4), 0.0, 1.0)));
+  }`;
 
 // 年で現れたり消えたりするための差し込み。材質と影の材質の両方に同じものを入れる
 function yearPatch(shared, vertexCommon, beginVertex, extra = {}) {
@@ -75,7 +82,8 @@ export function buildTrees(geo, shared, count = 9000) {
   group.name = 'trees';
   const crown = { conifer: [srgb('#3a5a37'), srgb('#4d6a3b')], broad: [srgb('#58793c'), srgb('#7a8c43')] };
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0);
-  const patch = yearPatch(shared, 'attribute float aDie;', 'transformed *= clamp((aDie - uYear) / 4.0, 0.0, 1.0);');
+  const patch = yearPatch(shared, 'attribute float aDie; ' + HOLE_GLSL, 'transformed *= clamp((aDie - uYear) / 4.0, 0.0, 1.0) * outsideHole(instanceMatrix[3].xz);',
+    { uHole: shared.uHole, uHoleR: shared.uHoleR });
   for (const kind of ['conifer', 'broad']) {
     const list = items[kind];
     const mat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.88 });
@@ -217,15 +225,17 @@ export function buildTown(geo, shared) {
   const plan = planTown(geo);
   const group = new THREE.Group();
   group.name = 'town';
-  const vCommon = 'attribute float aBorn; attribute float aEnd; attribute vec3 aWall; attribute float aRoof; attribute float aStep; uniform vec3 uRoofCol; uniform float uCoast; varying vec3 vBCol;';
-  // 埋め立て地の建物は、陸が水面から上がるのに合わせて出す（年を大きく飛ばしたとき、海の上に浮かないように）
+  const vCommon = 'attribute float aBorn; attribute float aEnd; attribute vec3 aWall; attribute float aRoof; attribute float aStep; uniform vec3 uRoofCol; uniform float uCoast; ' + HOLE_GLSL + ' varying vec3 vBCol;';
+  // 埋め立て地の建物は、陸が水面から上がるのに合わせて出す（年を大きく飛ばしたとき、海の上に浮かないように）。
+  // 特別な場面で模型を置くところ（uHole の帯の中）は消す
   const vBegin = `
     float bs = smoothstep(aBorn, aBorn + 2.0, uYear) * (1.0 - step(aEnd, uYear)) * clamp(uCoast - aStep + 1.0, 0.0, 1.0);
+    bs *= outsideHole(instanceMatrix[3].xz);
     float on = step(0.001, bs);
     transformed *= vec3(on, bs, on);
     vBCol = mix(aWall, uRoofCol * (0.75 + 0.25 * aWall), aRoof);`;
   const make = (geom, list, opts, key) => {
-    const patch = yearPatch(shared, vCommon, vBegin, { uRoofCol: { value: srgb(opts.roof) }, uCoast: shared.uCoast });
+    const patch = yearPatch(shared, vCommon, vBegin, { uRoofCol: { value: srgb(opts.roof) }, uCoast: shared.uCoast, uHole: shared.uHole, uHoleR: shared.uHoleR });
     const mat = new THREE.MeshStandardMaterial({ roughness: 0.82, flatShading: true });
     mat.onBeforeCompile = (sh) => {
       patch(sh);
@@ -288,8 +298,9 @@ export function railCurve(geo) {
 export function buildRail(geo, shared) {
   const curve = railCurve(geo);
   const n = Math.ceil(curve.getLength() / 2);
+  // 駅の側を後ろにしておく（特別な場面で、駅の近くだけ線を引かずに模型の線路を置けるように）
   const pos = [];
-  for (const p of curve.getSpacedPoints(n)) pos.push(p.x, geo.groundAt(p.x, p.z) + 0.6, p.z);
+  for (const p of curve.getSpacedPoints(n).reverse()) pos.push(p.x, geo.groundAt(p.x, p.z) + 0.6, p.z);
   const group = new THREE.Group();
   group.name = 'rail';
   const base = new Line2(new LineGeometry().setPositions(pos), fadeLineMaterial({ color: 0x23211e, linewidth: 3.4, transparent: true, depthWrite: false }, shared, 'rail-base'));
@@ -298,6 +309,8 @@ export function buildRail(geo, shared) {
   base.renderOrder = 4; dash.renderOrder = 5;
   group.add(base, dash);
   group.userData.from = 1891;
+  // 駅から dist（単位）までの線を描かない（0 で全部に戻す）
+  group.userData.trim = (dist) => { for (const l of [base, dash]) l.geometry.instanceCount = dist > 0 ? Math.max(0, n - Math.ceil(dist / 2)) : Infinity; };
   return group;
 }
 

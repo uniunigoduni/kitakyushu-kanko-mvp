@@ -1,5 +1,6 @@
 // 史跡の吹き出し。ピンを隠さない側に出し（ピンが画面の下の方なら上）、しっぽはピンを指したまま地図に付いていく。
 // 別のピンを選ぶと、前の吹き出しは消して新しい中身に入れ替える。
+// 特別な場面の「解説を読む」では、しっぽを付けずに地図の窓の端に寄せて出す（dock）。
 import { clamp, h, isPaid, paidUntil } from '../util.js';
 import { pinLabel } from './pins.js';
 import { adCard } from './ads.js';
@@ -12,13 +13,13 @@ const MIN_H = 160;
 export function createPopup(app, world, pins) {
   const map = world.renderer.domElement.parentElement;
   const tail = h('i', { class: 'popup-tail' });
-  const close = h('button', { class: 'popup-close', type: 'button', 'aria-label': '閉じる', text: '×', onclick: () => app.deselect() });
+  const close = h('button', { class: 'popup-close', type: 'button', 'aria-label': '閉じる', text: '×', onclick: () => (onClose ? onClose() : app.deselect()) });
   const scroll = h('div', { class: 'popup-scroll thin-scroll' });
   const foot = h('div', { class: 'popup-foot' });
   const el = h('div', { class: 'popup', role: 'dialog', 'aria-labelledby': 'popup-name', hidden: true }, tail, close, scroll, foot);
   map.append(el);
 
-  let cur = null, hideTimer = 0, paidTimer = 0;
+  let cur = null, hideTimer = 0, paidTimer = 0, dock = false, onClose = null;
   let side = '', w = 0, natH = 0, shrink = 0, cramped = false;
   const P = {};
   const last = { x: NaN, y: NaN, W: 0, H: 0 };
@@ -87,6 +88,12 @@ export function createPopup(app, world, pins) {
 
   function place() {
     if (!cur || el.hidden) return;
+    if (dock) {
+      // 端に寄せたときは CSS の置き場所のまま
+      box[0] = el.offsetLeft; box[1] = el.offsetTop; box[2] = box[0] + el.offsetWidth; box[3] = box[1] + el.offsetHeight;
+      cramped = false;
+      return;
+    }
     const p = pins.pins.get(cur.id);
     world.project(p.obj.position, P);
     const { W, H } = world.size;
@@ -132,13 +139,18 @@ export function createPopup(app, world, pins) {
     box[0] = x; box[1] = y; box[2] = x + w; box[3] = y + ph;
   }
 
-  function open(s) {
+  // opts.dock：しっぽなしで窓の端に寄せる。opts.onClose：× を押したとき（なければ史跡の選択を外す）
+  function open(s, opts = {}) {
     clearTimeout(hideTimer);
     cur = s;
+    dock = !!opts.dock;
+    onClose = opts.onClose ?? null;
+    el.classList.toggle('is-docked', dock);
     fill(s);
     el.hidden = false;
     el.classList.remove('is-open', 'is-away');
     side = '';
+    if (dock) { el.style.transform = ''; delete el.dataset.side; }
     measure();
     place();
     void el.offsetWidth;
@@ -147,13 +159,15 @@ export function createPopup(app, world, pins) {
   function hide() {
     if (!cur) return;
     cur = null;
+    onClose = null;
     clearTimeout(paidTimer);
     el.classList.remove('is-open');
     clearTimeout(hideTimer);
-    hideTimer = setTimeout(() => { el.hidden = true; scroll.replaceChildren(); }, 160);
+    hideTimer = setTimeout(() => { el.hidden = true; scroll.replaceChildren(); el.classList.remove('is-docked'); dock = false; }, 160);
   }
 
-  app.on('select', open);
+  // 特別な場面のある史跡は、場面の札を出す（吹き出しは「解説を読む」で開く）
+  app.on('select', (s) => { if (!app.stage?.owns(s)) open(s); });
   app.on('deselect', hide);
   // 時代を動かして、その史跡がない時代に入ったら閉じる
   app.on('era', (era) => { if (cur && !cur.eras.includes(era.id)) app.deselect(); });
@@ -170,6 +184,7 @@ export function createPopup(app, world, pins) {
   document.fonts?.ready.then(() => { measure(); place(); });
 
   return {
+    open, hide,
     get site() { return cur; },
     // 今の視点では、縮めずに出せる場所がない
     get cramped() { return cramped; },

@@ -1095,6 +1095,65 @@ body.is-intro .acct-btn { opacity: 0; visibility: hidden; }
 }
 .toast.is-on { opacity: 1; transform: none; }
 
+/* ---------- 特別な場面（壇ノ浦・門司駅・戦時中の港） ---------- */
+/* 場面の間は、ピンと赤い矢印をしまう（地名は残す） */
+body.is-stage .map-pins, body.is-stage .arrow-layer { opacity: 0; visibility: hidden; transition: opacity 240ms ease, visibility 0s 240ms; }
+/* 左下の札：年・名前・いま起きていること・解説への入口 */
+.stage-card {
+  position: absolute; left: 12px; bottom: 12px; z-index: 3;
+  width: min(312px, calc(100% - 24px));
+  padding: 14px 14px 12px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-float);
+  opacity: 0; transform: translateY(6px);
+  transition: opacity 220ms ease, transform 220ms cubic-bezier(.2, .8, .2, 1);
+}
+.stage-card.is-open { opacity: 1; transform: none; }
+.stage-card.is-under { opacity: 0; pointer-events: none; }
+.stage-close {
+  position: absolute; right: 8px; top: 8px;
+  width: 32px; height: 32px;
+  display: grid; place-items: center;
+  border-radius: var(--radius);
+  color: var(--text); font-size: 20px; line-height: 1;
+  transition: background-color var(--t-hover);
+}
+.stage-close:hover { background: var(--overlay); }
+.stage-year { margin: 0; padding-right: 36px; font: 500 12px/1.4 var(--mono); font-feature-settings: 'tnum'; color: var(--era-accent); }
+.stage-name { margin: 4px 36px 0 0; font-size: 18px; line-height: 1.4; font-weight: 700; color: var(--strong); letter-spacing: .03em; word-break: auto-phrase; text-wrap: balance; }
+.stage-cap { min-height: 3.4em; margin: 10px 0 0; font-size: 13.5px; line-height: 1.7; color: var(--text); word-break: auto-phrase; text-wrap: pretty; }
+.stage-cap.is-in { animation: stage-cap 420ms ease both; }
+@keyframes stage-cap { from { opacity: 0; transform: translateY(4px); } }
+.stage-list { margin: 10px 0 0; padding-left: 1.2em; list-style: decimal; font-size: 13px; line-height: 1.7; color: var(--text); }
+.stage-list li + li { margin-top: 2px; }
+.stage-dots { display: flex; gap: 4px; margin-top: 8px; }
+.stage-dots i { width: 16px; height: 2px; border-radius: 1px; background: var(--line); transition: background-color 300ms ease; }
+.stage-dots i.is-on { background: var(--era-accent); }
+.stage-actions { display: flex; gap: 6px; margin-top: 12px; }
+.stage-btn {
+  flex: 1 1 auto; height: 36px; padding: 0 10px;
+  border: 1px solid var(--line); border-radius: var(--radius);
+  color: var(--text); font-size: 12.5px; font-weight: 700; letter-spacing: .04em; white-space: nowrap;
+  transition: background-color var(--t-hover), color var(--t-hover);
+}
+.stage-btn:hover { background: var(--overlay); color: var(--strong); }
+.stage-btn.is-main { background: var(--text); border-color: var(--text); color: #000; }
+.stage-btn.is-main:hover { background: var(--strong); color: #000; }
+.stage-note { margin: 10px 0 0; font-size: 11px; line-height: 1.6; color: var(--muted); }
+/* 「解説を読む」：いつもの吹き出しの中身を、しっぽを付けずに窓の端へ寄せて出す */
+.popup.is-docked { left: 12px; top: 12px; transform: none; max-height: calc(100% - 24px); will-change: auto; }
+.popup.is-docked .popup-tail { display: none; }
+@media (max-width: 760px) {
+  .stage-card { left: 8px; right: 8px; bottom: 8px; width: auto; padding: 12px 12px 10px; }
+  .stage-name { font-size: 16.5px; }
+  .stage-cap { margin-top: 8px; }
+  .popup.is-docked { left: 8px; right: 8px; top: auto; bottom: 8px; width: auto; max-height: 62%; }
+  /* 札は窓の下いっぱいに出るので、拡大・縮小のボタンはその上へ */
+  body.is-stage .map-zoom { bottom: calc(var(--stage-h, 0px) + 16px); }
+}
+
 /* ---------- 画面が狭いとき（スマホ） ---------- */
 @media (max-width: 760px) {
   :root { --title-h: 56px; --tl-w: 92px; --band-h: 112px; --gutter: 8px; }

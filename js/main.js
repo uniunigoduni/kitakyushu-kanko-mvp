@@ -15,6 +15,7 @@ import { createPay } from './pay.js';
 import { createAccount } from './account.js';
 import { createFlavor } from './ui/flavor.js';
 import { createZoom } from './ui/zoom.js';
+import { createStage } from './scenes/stage.js';
 
 // 現代の今年（小数の誤差で前の年に見えないよう、年の途中に置く）
 const T_NOW = yearToT(NOW_YEAR + 0.5);
@@ -169,13 +170,14 @@ function start(world, sites, arData) {
   }
 
   // ---------- 史跡を選ぶ ----------
-  // 吹き出しが下に収まるよう、ピンを地図の窓の上寄り（高さ 28%）・左右の真ん中に置く視点。dist より遠ければ寄る
-  function viewFor(s, dist = world.home.distance * 0.55) {
+  // 吹き出しが下に収まるよう、ピンを地図の窓の上寄り（高さ 28%）・左右の真ん中に置く視点。dist より遠ければ寄る。
+  // base（特別な場面に入る前の視点）があれば、いまの視点の代わりにその距離・角度から考える
+  function viewFor(s, dist = world.home.distance * 0.55, base = null) {
     const pos = pins.position(s.id);
     const c = world.controls;
     const { H } = world.size;
-    const d = Math.min(c.distance, dist);
-    const polar = c.polarAngle, az = c.azimuthAngle;
+    const d = Math.min(base?.distance ?? c.distance, dist);
+    const polar = base?.polar ?? c.polarAngle, az = base?.azimuth ?? c.azimuthAngle;
     const upp = (2 * d * Math.tan((world.camera.fov * Math.PI) / 360)) / H;
     const shift = ((0.5 - 0.28) * H * upp) / Math.max(0.35, Math.cos(polar));
     return { target: [pos.x + Math.sin(az) * shift, pos.y, pos.z + Math.cos(az) * shift], distance: d, polar, azimuth: az };
@@ -186,13 +188,16 @@ function start(world, sites, arData) {
     const s = app.byId.get(id);
     if (!s || !s.eras.length) return; // まだ出していない自分の広告の見本
     if (s.ad) dist ??= world.home.distance * 0.1; // 広告は、まわりの通りが見えるところまで寄って開く
-    if (app.selected === s) { if (from !== 'map') world.view(viewFor(s, dist)); return; }
+    if (app.selected === s) { if (stage.site === s) return; if (from !== 'map') world.view(viewFor(s, dist)); return; }
+    // 特別な場面を開いていたら、カメラを戻さずにしまう（次の史跡へは、場面に入る前の視点から動かす）
+    const left = stage.active ? stage.leave('other') : null;
+    const base = left ?? (stage.has(s) ? stage.snapshot() : null);
     if (isToday(s, app.era)) {
       // 現代の地図の一押しの史跡：その場所へ寄りながら、年を数えてその年までさかのぼる
       deselect();
       const e = eraOfSite(s);
       const m = (e.t1 - e.t0) * 0.01;
-      world.view(viewFor(s));
+      world.view(viewFor(s, undefined, base));
       if (!(await travel.go(s, clamp(yearToT(s.year + 0.5), e.t0 + m, e.t1 - m)))) return;
       from = 'travel';
     } else if (!s.eras.includes(app.era.id)) {
@@ -204,8 +209,13 @@ function start(world, sites, arData) {
     }
     app.selected = s;
     app.emit('select', s);
+    // 特別な場面のある史跡は、場面がカメラを動かす（読み込めなかったときは、いつもの吹き出し）
+    if (stage.has(s)) {
+      if (!(await stage.enter(s, base)) && app.selected === s) { popup.open(s); world.view(viewFor(s, dist, base)); }
+      return;
+    }
     // 地図の上で押したとき（さかのぼってきたときも）は、吹き出しが収まらない場合だけ視点を動かす
-    if ((from !== 'map' && from !== 'travel') || popup.cramped) world.view(viewFor(s, dist));
+    if (left || (from !== 'map' && from !== 'travel') || popup.cramped) world.view(viewFor(s, dist, left));
   }
   // 一押しの史跡の吹き出しから、年を数えながら現代へ戻る。戻ったら、いまの場所のピンを弾ませる
   async function backToNow(s) {
@@ -224,6 +234,7 @@ function start(world, sites, arData) {
   const pins = createPins(app, world, sites);
   const popup = createPopup(app, world, pins);
   const travel = createTravel(app, world);
+  const stage = createStage(app, world, pins, popup);
   createZoom(world, popup);
   const ar = createAR(app, world, arData);
   app.openAR = (s, img) => ar.open(s, img);
@@ -262,12 +273,12 @@ function start(world, sites, arData) {
     if (top) top.close();
     else deselect();
   });
-  // 地図の何もないところを押したら（ドラッグでなければ）吹き出しを閉じる
+  // 地図の何もないところを押したら（ドラッグでなければ）吹き出しを閉じる。特別な場面の間は何もしない
   const canvas = world.renderer.domElement;
   let down = null;
   canvas.addEventListener('pointerdown', (e) => { down = e.button === 0 ? { x: e.clientX, y: e.clientY, t: performance.now() } : null; });
   canvas.addEventListener('pointerup', (e) => {
-    if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 4 && performance.now() - down.t < 300) deselect();
+    if (down && !stage.active && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 4 && performance.now() - down.t < 300) deselect();
     down = null;
   });
 

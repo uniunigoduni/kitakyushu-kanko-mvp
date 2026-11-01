@@ -22,18 +22,23 @@ export function createZoom(world, popup) {
   // キーボードでピンを順に送る前に届くよう、キャンバスのすぐ後ろに置く
   canvas.after(el);
 
-  // 自分の四角（地図の窓の中の px）。窓か自分の大きさが変わったときだけ測り直す
+  // 自分の四角（地図の窓の中の px）。窓か自分の大きさが変わったとき、特別な場面の札の上へ逃げたときに測り直す
+  const map = canvas.parentElement;
   const box = [0, 0, 0, 0];
-  const ro = new ResizeObserver(() => {
+  const measure = () => {
     box[0] = el.offsetLeft; box[1] = el.offsetTop;
     box[2] = box[0] + el.offsetWidth; box[3] = box[1] + el.offsetHeight;
-  });
-  ro.observe(canvas.parentElement);
+  };
+  const ro = new ResizeObserver(measure);
+  ro.observe(map);
   ro.observe(el);
+  let lift = '';
 
   // disabled にするとフォーカスが外れるので、aria-disabled で押せない見た目にする
   let canIn = null, canOut = null, covered = false;
   world.onFrame(() => {
+    const l = map.style.getPropertyValue('--stage-h');
+    if (l !== lift) { lift = l; measure(); }
     const i = world.canZoom(1 / STEP), o = world.canZoom(STEP);
     if (i !== canIn) { canIn = i; zin.setAttribute('aria-disabled', String(!i)); }
     if (o !== canOut) { canOut = o; zout.setAttribute('aria-disabled', String(!o)); }
