@@ -954,23 +954,31 @@ body.is-intro #timeline, body.is-intro #band, body.is-intro .map-canvas { pointe
 @keyframes pay-up { from { opacity: 0; transform: translateY(8px); } }
 @keyframes pay-spin { to { transform: rotate(1turn); } }
 
-/* ---------- 会員登録・ログイン（見た目だけのデモ）。右上のボタンと、地図の上に重ねる黒い窓 ---------- */
-.acct-btn {
+/* ---------- 右上のボタン（観光マップ・新規登録・共有）。最初の流しの間は隠す ---------- */
+.title-actions {
   margin-left: auto; flex: 0 0 auto;
+  display: flex; align-items: center; gap: 8px;
+  transition: opacity 400ms ease, visibility 400ms;
+}
+body.is-intro .title-actions { opacity: 0; visibility: hidden; }
+.hdr-btn {
+  flex: 0 0 auto;
   display: inline-flex; align-items: center; gap: 7px;
   height: 40px; padding: 0 14px 0 11px;
   border: 1px solid var(--line); border-radius: var(--radius);
   background: var(--bg); color: var(--text);
   font: 700 13.5px/1 var(--sans); letter-spacing: .06em; white-space: nowrap;
   pointer-events: auto;
-  transition: background-color var(--t-hover), color var(--t-hover), opacity 400ms ease, visibility 400ms;
+  transition: background-color var(--t-hover), color var(--t-hover), border-color var(--t-hover);
 }
-.acct-btn:hover, .acct-btn[aria-expanded='true'] { background: var(--overlay); color: var(--strong); }
-.acct-btn svg { flex: 0 0 auto; width: 18px; height: 18px; }
+.hdr-btn:hover, .hdr-btn[aria-expanded='true'] { background: var(--overlay); color: var(--strong); }
+.hdr-btn svg { flex: 0 0 auto; width: 18px; height: 18px; }
+.hdr-btn-text { max-width: 9em; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- 会員登録・ログイン（見た目だけのデモ）。右上のボタンと、地図の上に重ねる黒い窓 ---------- */
+.acct-wrap { position: relative; display: flex; }
 .acct-btn.is-user { gap: 8px; padding: 0 9px 0 5px; }
 .acct-btn.is-user svg { width: 16px; height: 16px; color: var(--muted); }
-.acct-btn-text { max-width: 9em; overflow: hidden; text-overflow: ellipsis; }
-body.is-intro .acct-btn { opacity: 0; visibility: hidden; }
 .acct-avatar {
   display: grid; place-items: center; flex: 0 0 auto;
   width: 28px; height: 28px; border-radius: 50%;
@@ -979,9 +987,9 @@ body.is-intro .acct-btn { opacity: 0; visibility: hidden; }
 }
 .acct-avatar.is-big { width: 44px; height: 44px; font-size: 20px; }
 
-/* 登録したあとのメニュー（ボタンの下） */
+/* 登録したあとのメニュー（ボタンの下。右の端をボタンにそろえる） */
 .acct-menu {
-  position: absolute; right: var(--gutter); top: calc(50% + 26px);
+  position: absolute; right: 0; top: calc(100% + 6px);
   width: 272px; padding: 6px;
   background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius);
   box-shadow: var(--shadow-float);
@@ -1114,6 +1122,17 @@ body.is-intro .acct-btn { opacity: 0; visibility: hidden; }
 .acct-note { margin: 12px 0 0; font-size: 12px; line-height: 1.6; color: var(--muted); text-align: center; }
 @keyframes acct-drop { from { opacity: 0; transform: translateY(-4px); } }
 
+/* ---------- 共有：公開しているページの QR コードを大きく出す（登録の窓と同じ黒い窓） ---------- */
+.share-card { width: auto; max-width: 100%; }
+.share-lead { margin: 2px 0 0; font-size: 13px; line-height: 1.7; color: var(--muted); }
+.share-qr { width: fit-content; margin: 14px auto 0; border-radius: calc(var(--radius) - 4px); overflow: hidden; background: #fff; }
+.share-qr img { display: block; width: min(400px, 56vh, calc(100vw - 72px)); height: auto; aspect-ratio: 1; }
+.share-url { margin: 12px 0 0; text-align: center; font: 500 13px/1.5 var(--mono); letter-spacing: .02em; overflow-wrap: anywhere; }
+.share-url a { padding: 2px 4px; border-radius: 6px; color: var(--text); text-decoration: underline; text-decoration-color: var(--muted); text-underline-offset: 3px; }
+.share-url a:hover { background: var(--overlay); color: var(--strong); }
+.share-copy svg { width: 18px; height: 18px; }
+.share-card .acct-text-btn { margin-top: 6px; }
+
 /* ---------- ひとことの知らせ（地図の窓の下の端。スマホでは＋／−のボタンの上）。AR・決済・登録の窓より下に置く ---------- */
 .toast {
   position: fixed; left: var(--tl-w); right: var(--gutter); bottom: calc(var(--band-h) + 16px); z-index: 90;
@@ -1192,19 +1211,21 @@ body.is-stage .map-pins, body.is-stage .arrow-layer { opacity: 0; visibility: hi
 /* ---------- 画面が狭いとき（スマホ） ---------- */
 @media (max-width: 760px) {
   :root { --title-h: 56px; --tl-w: 92px; --band-h: 112px; --gutter: 8px; }
+  /* 題字は「名前」の行と「時代名・年」の行に分け、右に3つのボタン（文字なしのアイコンだけ）を置く */
   #title {
-    display: grid; grid-template-columns: minmax(0, 1fr) auto; align-content: center;
-    gap: 3px 8px; padding: 0 var(--gutter) 0 14px;
+    display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-content: center; align-items: baseline; justify-items: start;
+    gap: 1px 8px; padding: 0 var(--gutter) 0 14px;
   }
-  #title h1 { grid-area: 1 / 1; font-size: 19px !important; gap: .4em; }
-  .title-year { grid-area: 2 / 1; }
-  .acct-btn { grid-area: 1 / 2 / 3 / 3; align-self: center; justify-content: center; width: 38px; height: 38px; padding: 0; }
-  .acct-btn.is-user { padding: 0; }
-  .acct-btn-text, .acct-btn.is-user svg { display: none; }
-  .acct-menu { top: calc(50% + 24px); width: min(272px, calc(100vw - 2 * var(--gutter))); }
+  #title h1 { display: contents; font-size: 19px !important; }
+  .title-name { grid-area: 1 / 1 / 2 / 3; font-size: .74em; line-height: 1.25; }
+  .title-era { grid-area: 2 / 1; }
+  .title-year { grid-area: 2 / 2; font-size: 11.5px; }
+  .title-actions { grid-area: 1 / 3 / 3 / 4; align-self: center; gap: 6px; }
+  .hdr-btn, .acct-btn.is-user { justify-content: center; width: 38px; height: 38px; padding: 0; }
+  .hdr-btn-text, .acct-btn.is-user svg { display: none; }
+  /* メニューは画面の右の端にそろえる（ボタンの下に出すと、狭い画面で左にはみ出る） */
+  .acct-menu { position: fixed; right: var(--gutter); top: calc(var(--title-h) - 4px); width: min(272px, calc(100vw - 2 * var(--gutter))); }
   .toast { bottom: calc(var(--band-h) + 106px); }
-  .title-name { font-size: .78em; }
-  .title-year { font-size: 11.5px; }
   #timeline { --axis-x: 18px; --pad-top: 12px; --pad-bottom: 18px; }
   .tl-major, .tl-leaders { display: none; }
   .tl-slider { left: 0; }
@@ -1238,7 +1259,9 @@ body.is-stage .map-pins, body.is-stage .arrow-layer { opacity: 0; visibility: hi
   .ar-era-name { font-size: 12.5px; line-height: 1.4; letter-spacing: 0; }
 }
 @media (max-width: 374px) {
-  .title-name { display: none; }
+  #title { padding-left: 10px; column-gap: 6px; }
+  #title h1 { font-size: 17px !important; }
+  .title-actions { gap: 4px; }
 }
 @media (max-height: 640px) {
   .tl-eras li { font-size: 11px; }

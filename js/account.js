@@ -53,20 +53,21 @@ export function createAccount(app, world) {
   let view = null, menu = null;
   app.user = null; // { type: 'traveler' | 'shop', name, email, kind }。ページを開いている間だけ
 
-  // ---------- 右上のボタン（地点の登録の実演用に、お店の登録から開く） ----------
-  const btn = h('button', { class: 'acct-btn', type: 'button', onclick: () => (app.user ? toggleMenu() : open('shop')) });
-  title.append(btn);
+  // ---------- 右上のボタン（地点の登録の実演用に、お店の登録から開く）。登録したあとのメニューはボタンの下に出す ----------
+  const btn = h('button', { class: 'hdr-btn acct-btn', type: 'button', onclick: () => (app.user ? toggleMenu() : open('shop')) });
+  const wrap = h('div', { class: 'acct-wrap' }, btn);
+  title.querySelector('.title-actions').append(wrap);
   function renderBtn() {
     const u = app.user;
     btn.classList.toggle('is-user', !!u);
     if (u) {
-      btn.replaceChildren(avatar(u.name), h('span', { class: 'acct-btn-text', text: u.name }), icon(CHEVRON));
+      btn.replaceChildren(avatar(u.name), h('span', { class: 'hdr-btn-text', text: u.name }), icon(CHEVRON));
       btn.setAttribute('aria-label', `${u.name}さんのメニュー`);
       btn.setAttribute('aria-expanded', String(!!menu));
       btn.setAttribute('aria-controls', 'acct-menu');
       btn.removeAttribute('aria-haspopup');
     } else {
-      btn.replaceChildren(icon(PERSON), h('span', { class: 'acct-btn-text', text: '新規登録' }));
+      btn.replaceChildren(icon(PERSON), h('span', { class: 'hdr-btn-text', text: '新規登録' }));
       btn.setAttribute('aria-label', '新規登録・ログイン');
       btn.setAttribute('aria-haspopup', 'dialog');
       btn.removeAttribute('aria-expanded');
@@ -97,7 +98,7 @@ export function createAccount(app, world) {
           h('p', { class: 'acct-menu-sub', text: u.email }))),
       ...items,
       h('p', { class: 'acct-menu-note', text: 'デモのため、読み込み直すと登録は消えます' }));
-    title.append(el);
+    wrap.append(el);
     // メニューの外を押したら閉じる。Esc でも閉じる
     const onDown = (e) => { if (!el.contains(e.target) && !btn.contains(e.target)) closeMenu(); };
     addEventListener('pointerdown', onDown, true);

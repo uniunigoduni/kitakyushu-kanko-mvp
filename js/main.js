@@ -14,6 +14,7 @@ import { createTicker } from './ui/ticker.js';
 import { createAR } from './ar.js';
 import { createPay } from './pay.js';
 import { createAccount } from './account.js';
+import { createShare } from './ui/share.js';
 import { createFlavor } from './ui/flavor.js';
 import { createZoom } from './ui/zoom.js';
 import { createStage } from './scenes/stage.js';
@@ -247,6 +248,7 @@ function start(world, sites, arData) {
   // 会員登録（見た目だけのデモ）。右上のボタンは時代の絵より先に置く（絵はボタンの手前で終わる）
   const account = createAccount(app, world);
   app.openAccount = (type) => account.open(type);
+  createShare(app, world); // 新規登録の右に「共有」（公開しているページの QR コード）
   // お店として登録した人の、自分の広告の見本：登録した店名と業種で地図に出し、寄って開く
   app.showAdPreview = () => {
     const u = app.user, s = app.byId.get('ad_preview');

@@ -297,18 +297,18 @@ export function createFlavor(app) {
   const root = document.getElementById('flavor');
   const title = document.getElementById('title');
   const map = document.getElementById('map');
-  const h1 = title.querySelector('h1');
-  const yearEl = title.querySelector('.title-year');
+  // 題字はスマホでは「名前」と「時代名・年」の2行に分かれるので、3つとも測る
+  const words = ['.title-name', '.title-era', '.title-year'].map((q) => title.querySelector(q));
   const body = document.body;
   const scenes = new Map();
   let cur = null, w = 0;
 
-  // 帯の左端はタイトルの文字の右、右端は右上の登録のボタンの手前（ボタンがなければ地図の窓の右）。
+  // 帯の左端はタイトルの文字の右、右端は右上のボタン（観光マップ・新規登録・共有）の手前（ボタンがなければ地図の窓の右）。
   // 時代名・書体・画面の幅・ボタンの幅（登録して名前に変わる）が変わるたびに測り直す
-  const acct = title.querySelector('.acct-btn');
+  const actions = title.querySelector('.title-actions');
   function layout() {
-    const left = Math.round(Math.max(h1.getBoundingClientRect().right, yearEl.getBoundingClientRect().right) + 20);
-    const right = Math.round(acct ? acct.getBoundingClientRect().left - 16 : map.getBoundingClientRect().right);
+    const left = Math.round(Math.max(...words.map((e) => e.getBoundingClientRect().right)) + 20);
+    const right = Math.round(actions?.offsetWidth ? actions.getBoundingClientRect().left - 16 : map.getBoundingClientRect().right);
     const s = title.offsetHeight / H;
     const room = Math.max(0, right - left);
     root.style.setProperty('--fl-left', px(left));
@@ -358,7 +358,7 @@ export function createFlavor(app) {
   app.on('t', () => cur?.update?.(app.era, app.year));
   new MutationObserver(sync).observe(body, { attributes: true, attributeFilter: ['class'] });
   const ro = new ResizeObserver(layout);
-  for (const e of [title, h1, yearEl, map, acct]) if (e) ro.observe(e);
+  for (const e of [title, ...words, map, actions]) if (e) ro.observe(e);
   layout();
   sync();
 }
