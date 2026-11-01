@@ -3,7 +3,7 @@
 // 地図をドラッグしたら場面に入る前の視点へ、寄り引き（ホイール・2本指・＋／−）したら
 // いちばん寄った普通の地図へ、すぐに戻してしまう。
 import * as THREE from 'three';
-import { h, reducedMotion, smooth } from '../util.js';
+import { h, historicalName, reducedMotion, smooth } from '../util.js';
 import { rng } from '../map/geo.js';
 import { yearToT } from '../eras.js';
 
@@ -46,7 +46,7 @@ export function createStage(app, world, pins, popup) {
     const { s, def } = c;
     const rm = reducedMotion();
     year.textContent = s.yearLabel;
-    name.textContent = s.name;
+    name.textContent = historicalName(s);
     cap.textContent = '';
     cap.classList.remove('is-in');
     // 動きを減らす設定では、場面を1コマで止めるので、説明はまとめて並べる

@@ -1,7 +1,7 @@
 // 史跡の吹き出し。ピンを隠さない側に出し（ピンが画面の下の方なら上）、しっぽはピンを指したまま地図に付いていく。
 // 別のピンを選ぶと、前の吹き出しは消して新しい中身に入れ替える。
 // 特別な場面の「解説を読む」では、しっぽを付けずに地図の窓の端に寄せて出す（dock）。
-import { clamp, h, isPaid, paidUntil } from '../util.js';
+import { clamp, h, historicalName, isPaid, paidUntil } from '../util.js';
 import { pinLabel, yearTag } from './pins.js';
 import { adCard } from './ads.js';
 
@@ -62,7 +62,7 @@ export function createPopup(app, world, pins) {
         site ? h('button', { class: 'spot-history', type: 'button', onclick: () => app.selectSite(site.id) },
           h('span', { class: 'spot-history-text' },
             h('span', { class: 'spot-history-tag', text: 'この場所の歴史' }),
-            h('span', { class: 'spot-history-name' }, h('span', { class: 'spot-history-year', text: yearTag(site) }), pinLabel(site.name)))) : null,
+            h('span', { class: 'spot-history-name' }, h('span', { class: 'spot-history-year', text: yearTag(site) }), pinLabel(historicalName(site))))) : null,
         s.sources?.length > 0 ? h('ul', { class: 'popup-sources' }, s.sources.map((r) =>
           h('li', {}, r.url ? h('a', { href: r.url, target: '_blank', rel: 'noopener', text: r.title }) : r.title))) : null,
       ].filter(Boolean));
@@ -90,7 +90,7 @@ export function createPopup(app, world, pins) {
       h('span', { text: 'ARで探検' }));
     const text = h('div', { class: 'popup-text' },
       h('p', { class: 'popup-year', text: s.yearLabel }),
-      h('h2', { class: 'popup-name', id: 'popup-name', text: s.name }),
+      h('h2', { class: 'popup-name', id: 'popup-name', text: historicalName(s) }),
       s.summary ? h('p', { class: 'popup-summary', text: s.summary }) : null,
       // 一押しの史跡は、いまの姿と、現代の地図へ戻るボタン
       s.pick ? h('div', { class: 'popup-now' },

@@ -3,7 +3,7 @@
 // 年を手で動かすか帯を手で流すまでそこに置く。
 // 現代の欄の終わりには、現代の地図に載せた観光地を番号の順に並べる
 import { ERAS, yearToT } from '../eras.js';
-import { clamp, easeInOut, h, reducedMotion } from '../util.js';
+import { clamp, easeInOut, h, historicalName, reducedMotion } from '../util.js';
 
 // 「1914年（大正3年）2月」→「1914年」のように、括弧の中を落とした短い年
 export const shortYear = (label) => label.replace(/（[^）]*）/g, '').replace(/\s+/g, '');
@@ -43,7 +43,7 @@ export function createBand(app, sites) {
         : h('button', { class: 'band-card', type: 'button', dataset: { id: s.id }, onclick: () => app.selectSite(s.id) },
           h('span', { class: 'bc-text' },
             h('span', { class: 'bc-year', text: shortYear(s.yearLabel ?? '') }),
-            h('span', { class: 'bc-name', text: s.name }),
+            h('span', { class: 'bc-name', text: historicalName(s) }),
             s.level >= 2 && h('span', { class: 'bc-meta', text: 'ガイドあり' })),
           thumb);
       const li = h('li', {}, btn);

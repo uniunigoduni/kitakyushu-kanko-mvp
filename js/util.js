@@ -4,6 +4,8 @@ export const lerp = (a, b, k) => a + (b - a) * k;
 export const smooth = (k) => k * k * (3 - 2 * k);
 export const easeInOut = (k) => (k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2);
 export const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+// 現代にも出す史跡は、史跡の年代を表示するときに当時の名前を使う。
+export const historicalName = (s) => (s.pick && s.thenName ? s.thenName : s.name);
 
 // 要素を作る。attrs の text は textContent、class は className、on〜 はイベント
 export function h(tag, attrs = {}, ...children) {

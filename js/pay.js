@@ -1,6 +1,6 @@
 // 「ガイドとつながる」の決済（デモ）。黒い地図から白い決済の画面に切り替え、確定するとガイドの電話番号を出す。
 // 決済した史跡は1時間覚えておき、その間は吹き出しのボタンから、決済を通らずに番号を出す。
-import { h, svg, isPaid, setPaid, paidUntil, reducedMotion } from './util.js';
+import { h, historicalName, svg, isPaid, setPaid, paidUntil, reducedMotion } from './util.js';
 import { pinLabel } from './ui/pins.js';
 
 const PHONE = '000-0000-0000'; // ダミーの番号
@@ -25,7 +25,7 @@ export function createPay(app, world) {
 
   function show(s, opener) {
     const rm = reducedMotion();
-    const name = pinLabel(s.name);
+    const name = pinLabel(historicalName(s));
     const back = h('button', { class: 'pay-back', type: 'button', onclick: () => close() }, icon('M15 5l-7 7 7 7'), h('span', { text: '地図へ戻る' }));
     const card = h('section', { class: 'pay-card' });
     const el = h('div', { class: 'pay', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'pay-title' }, back, h('div', { class: 'pay-main' }, card));

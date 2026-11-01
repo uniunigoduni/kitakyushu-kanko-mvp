@@ -7,7 +7,7 @@ import { Line2 } from 'three/addons/lines/Line2.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { clamp, easeInOut, h, svg, reducedMotion } from './util.js';
+import { clamp, easeInOut, h, historicalName, svg, reducedMotion } from './util.js';
 import { pinLabel } from './ui/pins.js';
 
 const RAD = Math.PI / 180;
@@ -151,7 +151,7 @@ export function createAR(app, world, data) {
     let cur = scenes ? scenes.find((c) => c.pano === s.pano) ?? scenes[0] : null; // いま見ている場面（選んだ時点で切り替える）
     let shown = cur;                                          // 画像まで入れ替え終わった場面
     const sceneLine = scenes && h('span', { class: 'ar-scene', 'aria-live': 'polite' });
-    const caption = h('p', { class: 'ar-caption' }, h('b', { id: 'ar-name', text: pinLabel(s.name) }), sceneLine, h('span', { text: '想像図（AIで生成）' }));
+    const caption = h('p', { class: 'ar-caption' }, h('b', { id: 'ar-name', text: pinLabel(historicalName(s)) }), sceneLine, h('span', { text: '想像図（AIで生成）' }));
     const hint = h('p', { class: 'ar-hint', 'aria-hidden': 'true' }, icon('M4 12h16M8 8l-4 4 4 4M16 8l4 4-4 4'), h('span', { text: coarse ? '指でなぞって見回す' : 'ドラッグして見回す' }));
     const list = h('ul', { class: 'sr-only', 'aria-label': '見どころ' });
     const shade = h('div', { class: 'ar-shade' });

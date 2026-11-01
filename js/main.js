@@ -3,7 +3,7 @@
 import { loadGeo } from './map/geo.js';
 import { createWorld } from './map/world.js';
 import { NOW_YEAR, ERAS, ERA_BY_ID, eraIndexAtT, accentAtT, tToYear, yearToT, toCss } from './eras.js';
-import { clamp, easeInOut, reducedMotion, sceneAt } from './util.js';
+import { clamp, easeInOut, historicalName, reducedMotion, sceneAt } from './util.js';
 import { createTitle } from './ui/title.js';
 import { createTimeline } from './ui/timeline.js';
 import { createBand } from './ui/band.js';
@@ -45,7 +45,7 @@ function timelineData(raw, sites) {
   let detail = (raw?.detail ?? [])
     .map((d) => ({ year: Number(d.year), era: d.era, text: d.text ?? d.label ?? d.title, siteId: d.siteId ?? d.site }))
     .filter((d) => Number.isFinite(d.year) && d.text);
-  if (!detail.length) detail = sites.filter((s) => !s.dummy && !s.ad && !s.spot).map((s) => ({ year: s.year, era: s.eras[0], text: s.name, siteId: s.id }));
+  if (!detail.length) detail = sites.filter((s) => !s.dummy && !s.ad && !s.spot).map((s) => ({ year: s.year, era: s.eras[0], text: historicalName(s), siteId: s.id }));
   return { major, detail };
 }
 

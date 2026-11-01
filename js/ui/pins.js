@@ -4,7 +4,7 @@
 // 時代ごとの注目の史跡には、赤ペンで描いたような矢印を一度だけ引く。
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { formatYear } from '../eras.js';
-import { h, svg } from '../util.js';
+import { h, historicalName, svg } from '../util.js';
 import { shortYear } from './band.js';
 import { adIcon, iconOf } from './ads.js';
 
@@ -58,8 +58,8 @@ export function createPins(app, world, sites) {
   const merged = new Map(sites.filter((s) => s.spot && s.same && s.site).map((s) => [s.site, s.id]));
   for (const s of sites) {
     const head = h('span', { class: 'pin-head' });
-    const label = h('span', { class: 'pin-name', text: pinLabel(s.name) });
-    const hit = h('button', { class: 'pin-hit', type: 'button', tabindex: -1, 'aria-label': s.name }, head, label);
+    const label = h('span', { class: 'pin-name', text: pinLabel(historicalName(s)) });
+    const hit = h('button', { class: 'pin-hit', type: 'button', tabindex: -1, 'aria-label': historicalName(s) }, head, label);
     const kind = (s.scenes ? ' is-frame' : s.special ? ' is-special' : s.dummy ? ' is-dummy' : s.ad ? ' is-ad' : s.spot ? ' is-spot' : '') + (s.pick ? ' is-pick' : '');
     const el = h('div', { class: `pin lv${s.level}${kind} is-off` }, h('i', { class: 'pin-shadow' }), h('i', { class: 'pin-stem' }), hit);
     const obj = new CSS2DObject(el);
@@ -122,9 +122,9 @@ export function createPins(app, world, sites) {
     p.g = geomOf(s, today);
     p.el.classList.toggle('is-today', today);
     if (s.special) p.el.classList.toggle('is-special', !today);
-    p.label.replaceChildren(today ? s.nowName ?? pinLabel(s.name) : pinLabel(s.name));
+    p.label.replaceChildren(today ? s.nowName ?? pinLabel(s.name) : pinLabel(historicalName(s)));
     if (today) p.label.append(h('span', { class: 'pin-year', text: yearTag(s) }));
-    p.hit.setAttribute('aria-label', today ? `${s.nowName ?? pinLabel(s.name)}（${yearTag(s)}へさかのぼる）` : s.name);
+    p.hit.setAttribute('aria-label', today ? `${s.nowName ?? pinLabel(s.name)}（${yearTag(s)}へさかのぼる）` : historicalName(s));
     p.w = 0;
   }
 
