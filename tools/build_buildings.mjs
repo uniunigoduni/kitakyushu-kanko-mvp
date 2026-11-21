@@ -222,8 +222,8 @@ function splitRects(tris, w, d) {
   for (const v of g) total += v;
   if (!total) return null;
   const rects = [], hgt = new Int32Array(nx), stack = [];
-  let left = total;
-  while (rects.length < MAX_PARTS) {
+  let left = total, tries = 0;
+  while (rects.length < MAX_PARTS && tries++ < MAX_PARTS + 4) {
     hgt.fill(0);
     let best = null;
     for (let j = 0; j < ny; j++) {
@@ -243,8 +243,11 @@ function splitRects(tris, w, d) {
     }
     if (!best || best.cells < Math.max(1, total * 0.04) || best.cells * cw * ch < 9) break;
     for (let j = best.j0; j <= best.j1; j++) g.fill(0, j * nx + best.i0, j * nx + best.i1 + 1);
+    const rw = (best.i1 - best.i0 + 1) * cw, rd = (best.j1 - best.j0 + 1) * ch;
+    // 2 つめからは、幅が 2.5 m に満たない細い部分（渡り廊下・ひさし・塀のような形）を置かない。地図では細い板に見えてしまうため
+    if (rects.length && Math.min(rw, rd) < 2.5) continue;
     left -= best.cells;
-    rects.push({ s: (best.i0 + best.i1 + 1) / 2 * cw, t: (best.j0 + best.j1 + 1) / 2 * ch, w: (best.i1 - best.i0 + 1) * cw, d: (best.j1 - best.j0 + 1) * ch });
+    rects.push({ s: (best.i0 + best.i1 + 1) / 2 * cw, t: (best.j0 + best.j1 + 1) / 2 * ch, w: rw, d: rd });
     if (left < total * 0.06) break;
   }
   return { rects, covered: 1 - left / total, painted: total * cw * ch };
@@ -284,7 +287,7 @@ for (const tile of files) {
   for (let b = 0; b < t.n; b++) {
     if (seen.has(ids[b])) { dup++; continue; }
     const vs = new Set(), tops = [];
-    let area = 0, cx = 0, cz = 0;
+    let area = 0, cx = 0, cz = 0, topH = 0;
     for (const k of tris[b]) {
       const i0 = m.index[k * 3], i1 = m.index[k * 3 + 1], i2 = m.index[k * 3 + 2];
       vs.add(i0); vs.add(i1); vs.add(i2);
@@ -295,12 +298,15 @@ for (const tile of files) {
       if (a3 < 1e-9 || a2 / a3 < 0.7) continue; // 壁と底
       const a = a2 / 2;
       area += a; cx += a * (X[i0] + X[i1] + X[i2]) / 3; cz += a * (Z[i0] + Z[i1] + Z[i2]) / 3;
+      topH += a * (H[i0] + H[i1] + H[i2]) / 3;
       tops.push(i0, i1, i2);
     }
     seen.set(ids[b], null);
     if (!vs.size) continue;
-    let lon0 = Infinity, lon1 = -Infinity, lat0 = Infinity, lat1 = -Infinity;
-    for (const i of vs) { lon0 = Math.min(lon0, LON[i]); lon1 = Math.max(lon1, LON[i]); lat0 = Math.min(lat0, LAT[i]); lat1 = Math.max(lat1, LAT[i]); }
+    let lon0 = Infinity, lon1 = -Infinity, lat0 = Infinity, lat1 = -Infinity, baseH = Infinity;
+    for (const i of vs) { lon0 = Math.min(lon0, LON[i]); lon1 = Math.max(lon1, LON[i]); lat0 = Math.min(lat0, LAT[i]); lat1 = Math.max(lat1, LAT[i]); baseH = Math.min(baseH, H[i]); }
+    // 立体そのものの高さ：屋根の面（面積で重みを付けた平均）から、いちばん低い頂点まで
+    const solidH = area > 0 ? topH / area - baseH : 0;
     // 属性に付いている範囲と、形から求めた範囲の差（読み違いの検査）
     if (bx0) boundsErr = Math.max(boundsErr, Math.abs(lon0 - bx0[b]) * M_LON, Math.abs(lon1 - bx1[b]) * M_LON, Math.abs(lat0 - by0[b]) * M_LAT, Math.abs(lat1 - by1[b]) * M_LAT);
     const r = minRect(hull([...vs].map((i) => [X[i], Z[i]])));
@@ -337,6 +343,7 @@ for (const tile of files) {
       parts, area, fill, rectW: Math.max(w, d), rectD: Math.min(w, d),
       year: Number.isInteger(yr) && yr >= 1850 && yr <= 2020 ? yr : 0,
       mh: typeof height === 'number' && height > 0 ? height : 0,
+      gh: solidH > 0.5 ? solidH : 0,
       floors: Number.isInteger(floors) && floors > 0 ? floors : 0,
       usage: usage ? usage[b] : null, struct: struct ? struct[b] : null,
       split: split ? { n: split.rects.length, covered: split.covered } : null,
@@ -465,7 +472,8 @@ console.log('年代  ' + [1850, 1900, 1920, 1945, 1960, 1975, 1990, 2005].map((y
 if (opt.dump) {
   fs.writeFileSync(opt.dump, JSON.stringify(rows.map((b) => ({
     x: +b.parts[0].x.toFixed(1), z: +b.parts[0].z.toFixed(1), w: +b.rectW.toFixed(1), d: +b.rectD.toFixed(1), area: +b.area.toFixed(1), fill: +b.fill.toFixed(3),
-    h: +b.h.toFixed(1), hGuess: b.hGuess, year: b.year, yearGuess: b.yearGuess ?? 0, floors: b.floors, usage: b.usage, struct: b.struct, parts: b.parts.length,
+    h: +b.h.toFixed(1), hGuess: b.hGuess, mh: +b.mh.toFixed(1), gh: +b.gh.toFixed(1), year: b.year, yearGuess: b.yearGuess ?? 0, floors: b.floors,
+    usage: b.usage, struct: b.struct, parts: b.parts.length,
   }))));
   console.log('調べ用: ' + opt.dump);
 }

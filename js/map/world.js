@@ -8,6 +8,7 @@ import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer
 import { GradeShader } from './grade.js';
 import { buildTerrain, buildWater, createCoastline } from './terrain.js';
 import { buildTrees, buildTown, buildRail, buildBridge, buildRoads } from './props.js';
+import { readTown, buildRealTown } from './town.js';
 import { NOW_YEAR } from '../eras.js';
 import { reducedMotion } from '../util.js';
 
@@ -43,7 +44,7 @@ export const LABELS = [
   { t: '北九州空港', lat: 33.8459, lon: 131.0349, cls: 'small outer', from: 2006 },
 ];
 
-export async function createWorld(container, geo, { roads: roadData = null } = {}) {
+export async function createWorld(container, geo, { roads: roadData = null, buildings = null } = {}) {
   // ---------- 共通の uniform（地形・海・線・小物で同じものを参照する） ----------
   const shared = {
     uTime: { value: 0 },
@@ -122,12 +123,14 @@ export async function createWorld(container, geo, { roads: roadData = null } = {
 
   // 時代の海岸線を先に作る（地形・海・町が、その uniform を使う）
   const coastline = createCoastline(geo, shared);
-  const terrain = buildTerrain(geo, shared);
+  // 現実の建物（PLATEAU。town.js）。読めなかったときは null で、港や駅からの広がりで見積もった町（props.js）を置く
+  const townData = buildings ? readTown(geo, buildings) : null;
+  const terrain = buildTerrain(geo, shared, townData);
   const water = buildWater(geo, shared);
-  // 現代の道。道の上には木も家も置かない（道が建物に隠れて途切れないように）
+  // 現代の道。道の上には木を置かない。見積もった町のときは、家も置かない（道が建物に隠れて途切れないように）
   const roads = buildRoads(geo, shared, roadData);
-  const trees = buildTrees(geo, shared, { clear: roads.userData.clear });
-  const town = buildTown(geo, shared, roads.userData.clear);
+  const trees = buildTrees(geo, shared, { clear: roads.userData.clear, town: townData });
+  const town = townData ? buildRealTown(geo, shared, townData) : buildTown(geo, shared, roads.userData.clear);
   const rail = buildRail(geo, shared);
   const bridge = buildBridge(geo);
   scene.add(water, terrain, coastline.group, trees, town, roads, rail, bridge);
@@ -355,8 +358,14 @@ export async function createWorld(container, geo, { roads: roadData = null } = {
     if (atHome) controls.setLookAt(...homePosition(), home.target.x, home.target.y, home.target.z, false);
     shadowState.key = '';
     wake();
+    stepTown();
     // 大きさを変えると描いた絵が消えるので、その場で描き直す（次のコマまで地図が空に見えないように）
     if (drawing && !paused) render();
+  }
+
+  // 現実の建物は、画面で小さくしか見えないものを描かない（town.js）。描く数が変わったら、影も描き直す
+  function stepTown() {
+    if (town.userData.update?.(camera, H * quality.pr, shared.uYear.value)) scheduleShadow();
   }
   let drawing = false; // 毎コマの描画を始めたら true
   function homePosition() {
@@ -572,6 +581,7 @@ export async function createWorld(container, geo, { roads: roadData = null } = {
     fitNear();
     stepCoast(dt);
     stepRoads(dt);
+    stepTown();
     for (const f of hooks) f(dt, time);
     updateLabels();
     // 動きが止まって 2 秒たったら 1 コマおきに描く

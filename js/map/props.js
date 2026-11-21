@@ -26,14 +26,14 @@ export function painted(geom, color) {
 }
 
 // 特別な場面で模型を置くところ：線分 uHole（a.xz → b.xz）から uHoleR より近い木・建物を消す（uHoleR = 0 なら何も消さない）
-const HOLE_GLSL = `uniform vec4 uHole; uniform float uHoleR;
+export const HOLE_GLSL = `uniform vec4 uHole; uniform float uHoleR;
   float outsideHole(vec2 p) {
     vec2 a = p - uHole.xy, d = uHole.zw - uHole.xy;
     return step(uHoleR, length(a - d * clamp(dot(a, d) / max(dot(d, d), 1e-4), 0.0, 1.0)));
   }`;
 
 // 年で現れたり消えたりするための差し込み。材質と影の材質の両方に同じものを入れる
-function yearPatch(shared, vertexCommon, beginVertex, extra = {}) {
+export function yearPatch(shared, vertexCommon, beginVertex, extra = {}) {
   return (sh) => {
     sh.uniforms.uYear = shared.uYear;
     Object.assign(sh.uniforms, extra);
@@ -42,7 +42,7 @@ function yearPatch(shared, vertexCommon, beginVertex, extra = {}) {
       .replace('#include <begin_vertex>', `#include <begin_vertex>\n${beginVertex}`);
   };
 }
-function depthMaterialWith(patch, key) {
+export function depthMaterialWith(patch, key) {
   const m = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
   m.onBeforeCompile = patch;
   m.customProgramCacheKey = () => 'depth-' + key;
@@ -51,7 +51,7 @@ function depthMaterialWith(patch, key) {
 
 // ---------- 木 ----------
 // clear(x, z) が true の所（現代の道の上）には植えない。rand() の並びを変えないよう、選んだあとで外す
-export function buildTrees(geo, shared, { clear = null, count = 9000 } = {}) {
+export function buildTrees(geo, shared, { clear = null, count = 9000, town = null } = {}) {
   const rand = rng(11);
   const noise = new SimplexNoise({ random: rand });
   const townYear = townYearFn(geo);
@@ -74,7 +74,9 @@ export function buildTrees(geo, shared, { clear = null, count = 9000 } = {}) {
     const nz = noise.noise(x * 0.018, z * 0.018) * 0.65 + noise.noise(x * 0.06, z * 0.06) * 0.35;
     if (rand() > 0.5 + 0.5 * nz) continue;
     const ty = h < 60 && slope < 0.22 ? townYear(x, z) : Infinity;
-    const die = Number.isFinite(ty) ? ty + rand() * 14 : 1e5;
+    let die = Number.isFinite(ty) ? ty + rand() * 14 : 1e5;
+    // 現実の建物（town.js）があるとき：木は、すぐそば（20 m 以内）に建物が建つ年に消える
+    if (town) die = Math.min(1e5, town.lotYearAt(x, z, 2));
     const kind = h > 160 ? (rand() < 0.7 ? 'conifer' : 'broad') : rand() < 0.35 ? 'conifer' : 'broad';
     items[kind].push({ x, z, y: geo.heightAt(x, z) - 0.25, s: 0.8 + rand() * 0.55, r: rand() * Math.PI * 2, die, tone: rand() });
   }

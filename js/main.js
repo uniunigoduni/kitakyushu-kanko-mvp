@@ -36,6 +36,7 @@ async function loadJSON(url, fallback) {
     return fallback;
   }
 }
+const loadBin = (url) => fetch(url).then((res) => (res.ok ? res.arrayBuffer() : null)).catch(() => null);
 
 // 年表のデータ。timeline.json がまだないときは、史跡から詳しい年表だけを作る
 function timelineData(raw, sites) {
@@ -56,7 +57,7 @@ function fail(message, err) {
 }
 
 let geo, world;
-const [geoResult, sitesData, timelineRaw, arData, dummyData, adsData, roadsData, spotsData] = await Promise.all([
+const [geoResult, sitesData, timelineRaw, arData, dummyData, adsData, roadsData, spotsData, buildingsMeta, buildingsBin] = await Promise.all([
   loadGeo('data/').catch((err) => err),
   loadJSON('data/sites.json', { sites: [] }),
   loadJSON('data/timeline.json', null),
@@ -69,13 +70,19 @@ const [geoResult, sitesData, timelineRaw, arData, dummyData, adsData, roadsData,
   loadJSON('data/roads.json', null),
   // 現代の地図に載せる主な観光地
   loadJSON('data/spots.json', { spots: [] }),
+  // 現実の建物（国土交通省 PLATEAU。tools/build_buildings.mjs）。読めないときは、見積もった町を置く
+  loadJSON('data/buildings.json', null),
+  loadBin('data/buildings.bin'),
 ]);
 if (geoResult instanceof Error) {
   fail('地図のデータを読み込めませんでした。ページを読み込み直してください。', geoResult);
 } else {
   geo = geoResult;
   try {
-    world = await createWorld(document.getElementById('map'), geo, { roads: roadsData });
+    world = await createWorld(document.getElementById('map'), geo, {
+      roads: roadsData,
+      buildings: buildingsMeta && buildingsBin ? { meta: buildingsMeta, bin: buildingsBin } : null,
+    });
   } catch (err) {
     fail('この端末では立体の地図を表示できませんでした。別のブラウザか、パソコンで開いてください。', err);
   }

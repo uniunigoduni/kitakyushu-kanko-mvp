@@ -55,7 +55,8 @@ const RISE_GLSL = /* glsl */`
   float rise = aFrom > 0.5 ? clamp(uCoast - aFrom + 1.0, 0.0, 1.0) : 1.0;
   transformed.y = mix(${SUNK.toFixed(2)}, transformed.y, rise);`;
 
-export function buildTerrain(geo, shared) {
+// town = 現実の建物（town.js の readTown）。あるときは、地面の町の色を、まわりの建物が建ったころから付ける
+export function buildTerrain(geo, shared, town = null) {
   const { nx, ny } = geo;
   const n = nx * ny;
   const pos = new Float32Array(n * 3), col = new Float32Array(n * 3), shoreCol = new Float32Array(n * 3), wallCol = new Float32Array(n * 3);
@@ -97,7 +98,8 @@ export function buildTerrain(geo, shared) {
     aFrom[k] = geo.land[k] ? geo.coastStep[k] : 0;
     const h = geo.hm[k];
     // 町の色は、陸になってから
-    aTown[k] = geo.mask[k] && geo.land[k] && h < 60 && geo.slopeAt(x, z) < 0.22 ? Math.max(townYear(x, z), geo.landYear[k]) : 1e5;
+    if (town) aTown[k] = geo.mask[k] && geo.land[k] ? Math.max(town.field[k], geo.landYear[k]) : 1e5;
+    else aTown[k] = geo.mask[k] && geo.land[k] && h < 60 && geo.slopeAt(x, z) < 0.22 ? Math.max(townYear(x, z), geo.landYear[k]) : 1e5;
   }
   // 四隅とも海のマスは水の下に隠れるので作らない。区の外（四隅とも区の外）は別の面にする
   const idxIn = [], idxOut = [];

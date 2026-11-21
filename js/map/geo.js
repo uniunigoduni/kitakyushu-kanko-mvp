@@ -184,12 +184,12 @@ export const TOWN_SEEDS = [
   { name: '吉志', lat: 33.8760, lon: 130.9750, start: 1970, spread: 45, max: 1400 },
 ];
 export const VILLAGES = [
-  { name: '門司関', lat: 33.9600, lon: 130.9640, start: 800, r: 22, n: 26 },
+  { name: '門司関', lat: 33.9563, lon: 130.9656, start: 800, r: 22, n: 26 },
   { name: '大里宿', lat: 33.9070, lon: 130.9320, start: 1650, r: 26, n: 40 },
   { name: '田野浦', lat: 33.9560, lon: 130.9870, start: 1200, r: 20, n: 22 },
-  { name: '白野江', lat: 33.9520, lon: 131.0030, start: 1600, r: 18, n: 16 },
-  { name: '青浜', lat: 33.9474, lon: 131.0194, start: 1600, r: 16, n: 14 },
-  { name: '恒見', lat: 33.8521, lon: 130.9849, start: 1600, r: 18, n: 16 },
+  { name: '白野江', lat: 33.9442, lon: 131.0088, start: 1600, r: 18, n: 16 },
+  { name: '青浜', lat: 33.9511, lon: 131.0178, start: 1600, r: 16, n: 14 },
+  { name: '恒見', lat: 33.8553, lon: 130.9862, start: 1600, r: 18, n: 16 },
 ];
 export function townYearFn(geo) {
   const seeds = TOWN_SEEDS.map((s) => ({ ...s, xz: geo.toXZ(s.lon, s.lat) }));
