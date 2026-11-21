@@ -363,17 +363,33 @@ const cellOf = (x, z) => {
   const i = Math.round((x + GW / 2) / (GW / (GX - 1))), j = Math.round((z + GD / 2) / (GD / (GY - 1)));
   return i < 0 || j < 0 || i >= GX || j >= GY ? -1 : j * GX + i;
 };
-let outside = 0, small = 0, onSea = 0, noHeight = 0;
+// 高さは、PLATEAU の立体そのものの高さ（屋根の面まで）を使う。「計測した高さ」の属性は、敷地でいちばん高い点
+// （となりの木・崖・塔屋）を拾っていて、平屋が 40 m になることがあるので、そのままは使わない。
+// 階数の記録と大きく食い違うものだけ、次のように直す：
+//   none … 計測した高さが無い建物は、立体が一律 3 m の仮の高さ。40 m2 以上は 階数 × 3 m ＋ 1 m（階数も無ければ 6.5 m）とみなす
+//   high … 戸建てと木造の共同住宅で 階数 × 4 m ＋ 5 m を超えるもの（木や崖を拾った値）は、階数 × 3 m ＋ 1 m とみなす
+//   low  … 3 階以上・100 m2 以上で、立体が 階数 × 2 m 未満と低すぎ、計測した高さの方が階数に合うものは、計測した高さを使う
+const heightOf = (b) => {
+  const byFloors = b.floors ? b.floors * 3 + 1 : 0;
+  if (!b.mh) return [b.area >= 40 ? byFloors || 6.5 : 3, 'none'];
+  if (!b.gh) return [b.mh, ''];
+  const u = USAGE_OF[b.usage], home = u === 0 || u === 1 || (u === 2 && b.struct === '木造・土蔵造');
+  if (home && byFloors && b.gh > b.floors * 4 + 5) return [byFloors, 'high'];
+  if (b.floors >= 3 && b.area >= 100 && b.gh < b.floors * 2 && Math.abs(b.mh - byFloors) < Math.abs(b.gh - byFloors)) return [b.mh, 'low'];
+  return [b.gh, ''];
+};
+let outside = 0, small = 0, onSea = 0;
+const hWhy = { none: 0, high: 0, low: 0 };
 const rows = [];
 for (const b of all) {
   const [p] = b.parts, k = cellOf(p.x, p.z);
   if (k < 0 || !wardMask[k]) { outside++; continue; }
   if (b.area < opt.minArea) { small++; continue; }
   if (landRaw[k] === -32768) onSea++;
-  // 高さ：計測した高さ。無ければ階数 × 3 m ＋ 1 m。それも無ければ、小屋は 3.5 m・ほかは 6.5 m とみなす
-  b.hGuess = !b.mh;
-  b.h = b.mh || (b.floors ? b.floors * 3 + 1 : b.area < 30 ? 3.5 : 6.5);
-  if (b.hGuess) noHeight++;
+  const [h, why] = heightOf(b);
+  b.h = h;
+  b.hGuess = why === 'none' || why === 'high';
+  if (why) hWhy[why]++;
   rows.push(b);
 }
 // 建てた年の記録が無い建物は、近くの記録がある建物からもらう（近い 8 棟までの中から、場所で決まる 1 棟）
@@ -436,7 +452,7 @@ const meta = {
     { name: 'z', type: 'int16', scale: 0.5, unit: 'm', note: '地形の中心から南へ' },
     { name: 'w', type: 'uint16', scale: 0.1, unit: 'm', note: '長い辺' },
     { name: 'd', type: 'uint16', scale: 0.1, unit: 'm', note: '短い辺' },
-    { name: 'h', type: 'uint16', scale: 0.1, unit: 'm', note: '地面からの高さ' },
+    { name: 'h', type: 'uint16', scale: 0.1, unit: 'm', note: '地面からの高さ（PLATEAU の立体の高さ。kind の 0x40 が立っていれば、階数などからの見積もり）' },
     { name: 'year', type: 'uint16', note: '建てた年。0x8000 が立っていれば、近くの建物からの推定' },
     { name: 'ang', type: 'uint8', scale: Math.PI / 256, unit: 'rad', note: '長い辺の向き（東から南へ回る角）' },
     { name: 'kind', type: 'uint8', note: '下 4 ビット = 用途、次の 2 ビット = 構造、0x40 = 高さが推定、0x80 = 前の行と同じ建物の続き' },
@@ -444,7 +460,8 @@ const meta = {
   usage: USAGE,
   struct: STRUCT,
   stats: {
-    yearRecorded: count((b) => b.year), yearGuessed: guessed, heightGuessed: noHeight,
+    yearRecorded: count((b) => b.year), yearGuessed: guessed,
+    heightGuessed: hWhy.none + hWhy.high, heightNoMeasure: hWhy.none, heightTooHigh: hWhy.high, heightFromMeasured: hWhy.low,
     split: count((b) => b.parts.length > 1), droppedSmall: small, droppedOutside: outside, onSeaCell: onSea,
   },
 };
@@ -459,7 +476,8 @@ const pct = (vals, ps = [0, 5, 25, 50, 75, 95, 99, 100]) => {
 };
 const tally = (f) => { const c = new Map(); for (const b of rows) c.set(f(b), (c.get(f(b)) ?? 0) + 1); return [...c].sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(' / '); };
 console.log(`使う建物 ${rows.length}（行 ${N}・${(bin.length / 1024).toFixed(0)} KB）  区や格子の外 ${outside}  ${opt.minArea} m2 未満で外した ${small}  海のマスの上 ${onSea}`);
-console.log(`年の記録あり ${meta.stats.yearRecorded}  近くからの推定 ${guessed}（近くに記録が無く全体の中央値 ${median} にした ${alone}）  高さの推定 ${noHeight}`);
+console.log(`年の記録あり ${meta.stats.yearRecorded}  近くからの推定 ${guessed}（近くに記録が無く全体の中央値 ${median} にした ${alone}）`);
+console.log(`高さの見積もり ${hWhy.none + hWhy.high}（計測が無い ${hWhy.none}・階数の割に高すぎる家 ${hWhy.high}）  計測した高さを使った ${hWhy.low}`);
 console.log('面積 m2  ' + pct(rows.map((b) => b.area)));
 console.log('高さ m   ' + pct(rows.map((b) => b.h)));
 console.log('面積 ÷ 外接長方形  ' + pct(rows.map((b) => b.fill)));
