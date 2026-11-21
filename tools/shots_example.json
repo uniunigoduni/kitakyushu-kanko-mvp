@@ -1,0 +1,17 @@
+{
+ "shots": [
+  { "name": "mojiko_1925_mid", "year": 1925, "view": { "lon": 130.9617, "lat": 33.9452, "distance": 250 } },
+  { "name": "mojiko_1925_close", "year": 1925, "view": { "lon": 130.9617, "lat": 33.9452, "distance": 90 } },
+  { "name": "mojiko_1960_mid", "year": 1960, "view": { "lon": 130.9617, "lat": 33.9452, "distance": 250 } },
+  { "name": "mojiko_2019_mid", "year": 2019, "view": { "lon": 130.9617, "lat": 33.9452, "distance": 250 } },
+  { "name": "mojiko_2019_close", "year": 2019, "view": { "lon": 130.9617, "lat": 33.9452, "distance": 90 } },
+  { "name": "hill_2019_close", "year": 2019, "view": { "lon": 130.9690, "lat": 33.9440, "distance": 110 } },
+  { "name": "dairi_2019_close", "year": 2019, "view": { "lon": 130.9345, "lat": 33.9040, "distance": 110 } },
+  { "name": "dairi_1750_close", "year": 1750, "view": { "lon": 130.932, "lat": 33.907, "distance": 90 } },
+  { "name": "dairi_1925_mid", "year": 1925, "view": { "lon": 130.932, "lat": 33.907, "distance": 250 } },
+  { "name": "shinmoji_2019_mid", "year": 2019, "view": { "lon": 130.9953, "lat": 33.8618, "distance": 400 } },
+  { "name": "home_2019", "year": 2019, "home": true },
+  { "name": "p_mojiko_2019_close", "size": "phone", "year": 2019, "view": { "lon": 130.9617, "lat": 33.9452, "distance": 90 } },
+  { "name": "p_hill_2019_close", "size": "phone", "year": 2019, "view": { "lon": 130.9690, "lat": 33.9440, "distance": 110 } }
+ ]
+}
