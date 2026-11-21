@@ -1,0 +1,115 @@
+{
+ "count": 37473,
+ "buildings": 33557,
+ "source": "国土交通省 Project PLATEAU「3D都市モデル 北九州市（2020年度）」建築物 LOD1・門司区（加工して作成）",
+ "sourceUrl": "https://www.geospatial.jp/ckan/dataset/plateau-40100-kitakyushu-shi-2020",
+ "surveyYear": 2016,
+ "layout": "同じ項目を count 個ずつ、次の順に並べる（リトルエンディアン）。大きい建物から順",
+ "fields": [
+  {
+   "name": "x",
+   "type": "int16",
+   "scale": 0.5,
+   "unit": "m",
+   "note": "地形の中心から東へ"
+  },
+  {
+   "name": "z",
+   "type": "int16",
+   "scale": 0.5,
+   "unit": "m",
+   "note": "地形の中心から南へ"
+  },
+  {
+   "name": "w",
+   "type": "uint16",
+   "scale": 0.1,
+   "unit": "m",
+   "note": "長い辺"
+  },
+  {
+   "name": "d",
+   "type": "uint16",
+   "scale": 0.1,
+   "unit": "m",
+   "note": "短い辺"
+  },
+  {
+   "name": "h",
+   "type": "uint16",
+   "scale": 0.1,
+   "unit": "m",
+   "note": "地面からの高さ（PLATEAU の立体の高さ。kind の 0x40 が立っていれば、階数などからの見積もり）"
+  },
+  {
+   "name": "year",
+   "type": "uint16",
+   "note": "建てた年。0x8000 が立っていれば、近くの建物からの推定（高さの段が同じ建物だけを見る）"
+  },
+  {
+   "name": "ang",
+   "type": "uint8",
+   "scale": 0.01227184630308513,
+   "unit": "rad",
+   "note": "長い辺の向き（東から南へ回る角）"
+  },
+  {
+   "name": "kind",
+   "type": "uint8",
+   "note": "下 4 ビット = 用途、次の 2 ビット = 構造、0x40 = 高さが推定、0x80 = 前の行と同じ建物の続き"
+  }
+ ],
+ "usage": [
+  "住宅",
+  "店舗等併用住宅",
+  "共同住宅",
+  "商業施設",
+  "業務施設",
+  "文教厚生施設",
+  "官公庁施設",
+  "工場",
+  "運輸倉庫施設",
+  "農林漁業用施設",
+  "その他"
+ ],
+ "struct": [
+  "不明",
+  "木造・土蔵造",
+  "非木造",
+  "鉄筋コンクリート造"
+ ],
+ "stats": {
+  "yearRecorded": 24636,
+  "yearGuessed": 8921,
+  "yearGuessedByHeight": [
+   {
+    "fromM": 0,
+    "guessed": 8572,
+    "notBefore": null,
+    "raised": 0
+   },
+   {
+    "fromM": 10,
+    "guessed": 273,
+    "notBefore": 1962,
+    "raised": 10
+   },
+   {
+    "fromM": 20,
+    "guessed": 76,
+    "notBefore": 1974,
+    "raised": 3
+   }
+  ],
+  "heightGuessed": 3397,
+  "heightNoMeasure": 3105,
+  "heightTooHigh": 240,
+  "heightSlim": 29,
+  "heightWoodCap": 23,
+  "heightFromMeasured": 74,
+  "split": 2673,
+  "droppedSmall": 31,
+  "droppedOutside": 0,
+  "onSeaCell": 45
+ }
+}
