@@ -226,6 +226,18 @@ export function createPins(app, world, sites) {
   };
   // 名前が地図の端からはみ出すか（はみ出す側には出さない）
   const outside = (b) => b[0] < -4 || b[2] > world.size.W + 4;
+  // 地図の左下の出典（css の .map-credit）。ピンの層より上にあって、出典の名前はリンクで押せる。ピンの頭や名前が
+  // その下に入ると字が重なって読めず、ピンも押せないので、出典の四角にはピンを置かない（必ず出すピンは別）。
+  // 地名と赤い矢印も、この四角をよける。四角は、地図の大きさが変わったときと書体が読めたときに測り直す
+  const creditEl = world.renderer.domElement.parentElement.querySelector('.map-credit');
+  const KEEP_OUT = { forced: true, s: {} }; // 置いた四角の持ち主の代わり（ピンにどかされない）
+  let credit = null, creditW = 0, creditH = 0, needCredit = true;
+  function measureCredit(W, H) {
+    needCredit = false; creditW = W; creditH = H;
+    const w = creditEl?.offsetWidth ?? 0;
+    credit = w ? [creditEl.offsetLeft - 3, creditEl.offsetTop - 3, creditEl.offsetLeft + w + 3, creditEl.offsetTop + creditEl.offsetHeight + 3] : null;
+    if (credit) credit.p = KEEP_OUT;
+  }
   const Q = {};
   let lastR = -1, lastLayout = 0;
   // 大事なピンから順に置く。選んでいるピンと矢印のピン、写真の枠のピン（どの時代でも押せるように）は必ず出す。
@@ -236,6 +248,8 @@ export function createPins(app, world, sites) {
     dirty = false;
     lastLayout = performance.now();
     if (needMeasure) { measure(); if (needMeasure) dirty = true; }
+    const { W, H } = world.size;
+    if (needCredit || W !== creditW || H !== creditH) measureCredit(W, H);
     const r = world.distance() / world.home.distance;
     lastR = r;
     const sel = app.selected;
@@ -254,6 +268,7 @@ export function createPins(app, world, sites) {
   // 大事なピンの頭を全部置いてから、名前を置く。押しのけられたピンがあれば、印を付けて true を返す
   function placeMajor(list, r) {
     placed.length = 0;
+    if (credit) placed.push(credit);
     const named = [];
     for (const p of list) {
       p.evicted = false;
@@ -335,7 +350,7 @@ export function createPins(app, world, sites) {
     return out;
   }
   const rects = [];
-  world.setLabelBlockers(() => { rects.length = 0; return pinRects(rects); });
+  world.setLabelBlockers(() => { rects.length = 0; if (credit) rects.push(credit); return pinRects(rects); });
 
   // ---------- 赤い矢印 ----------
   const map = world.renderer.domElement.parentElement;
@@ -418,6 +433,7 @@ export function createPins(app, world, sites) {
     const { W, H } = world.size;
     const hw = p.g.w;
     const avoid = pinRects(world.labelRects(), p);
+    if (credit) avoid.push(credit);
     if (p.w) avoid.push(p.left ? [P.x + hw / 2 - p.w, P.y - 11, P.x - hw / 2, P.y + 11] : [P.x + hw / 2, P.y - 11, P.x - hw / 2 + p.w, P.y + 11]);
     const inWin = ([dx, dy]) => P.x + dx > 16 && P.x + dx < W - 16 && P.y + dy > 16 && P.y + dy < H - 16;
     // 線の上の 12 か所のうち、地名やピンにかかる数
@@ -498,6 +514,7 @@ export function createPins(app, world, sites) {
   function remeasure() {
     for (const p of pins.values()) p.w = 0;
     needMeasure = true;
+    needCredit = true;
     dirty = true;
     world.measureLabels();
   }

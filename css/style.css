@@ -151,12 +151,15 @@ body.is-intro .map-zoom { opacity: 0; visibility: hidden; }
   max-width: calc(100% - 80px);
   margin: 0;
   font-size: 10px; line-height: 1.45;
-  color: rgba(255, 255, 255, .5);
-  text-shadow: 0 0 3px rgba(0, 0, 0, .8);
+  color: rgba(255, 255, 255, .64);
+  text-shadow: 0 0 2px rgba(0, 0, 0, .9), 0 0 5px rgba(0, 0, 0, .6); /* 明るい町の上でも読めるように、地名と同じ二重の影 */
   pointer-events: none; user-select: none;
 }
 .map-credit span { display: inline-block; margin-right: .9em; }
-body.is-intro .map-credit { opacity: 0; }
+/* 出典の名前だけ押せる（元のデータのページへ）。ほかの所は地図のドラッグをそのまま通す */
+.map-credit a { pointer-events: auto; text-decoration: underline; text-decoration-color: rgba(255, 255, 255, .4); text-underline-offset: 2px; }
+.map-credit a:hover { color: rgba(255, 255, 255, .9); }
+body.is-intro .map-credit { opacity: 0; visibility: hidden; }
 
 /* 地名 */
 .lbl {
