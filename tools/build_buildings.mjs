@@ -368,18 +368,22 @@ const cellOf = (x, z) => {
 // 階数の記録と大きく食い違うものだけ、次のように直す：
 //   none … 計測した高さが無い建物は、立体が一律 3 m の仮の高さ。40 m2 以上は 階数 × 3 m ＋ 1 m（階数も無ければ 6.5 m）とみなす
 //   high … 戸建てと木造の共同住宅で 階数 × 4 m ＋ 5 m を超えるもの（木や崖を拾った値）は、階数 × 3 m ＋ 1 m とみなす
+//   slim … 1〜3 階・100 m2 未満の細い建物で 階数 × 4 m ＋ 8 m を超えるもの（同じく木や崖。工場・倉庫は塔やサイロがあるので除く）も、階数 × 3 m ＋ 1 m とみなす
+//   wood … 木造・1,000 m2 未満で 階数 × 4 m ＋ 5 m を超えるものは、階数 × 4 m ＋ 5 m までにする（寺の本堂のような大きな屋根の分は残す）
 //   low  … 3 階以上・100 m2 以上で、立体が 階数 × 2 m 未満と低すぎ、計測した高さの方が階数に合うものは、計測した高さを使う
 const heightOf = (b) => {
   const byFloors = b.floors ? b.floors * 3 + 1 : 0;
   if (!b.mh) return [b.area >= 40 ? byFloors || 6.5 : 3, 'none'];
   if (!b.gh) return [b.mh, ''];
-  const u = USAGE_OF[b.usage], home = u === 0 || u === 1 || (u === 2 && b.struct === '木造・土蔵造');
+  const u = USAGE_OF[b.usage], wood = b.struct === '木造・土蔵造', home = u === 0 || u === 1 || (u === 2 && wood);
   if (home && byFloors && b.gh > b.floors * 4 + 5) return [byFloors, 'high'];
+  if (byFloors && b.floors <= 3 && b.area < 100 && u !== 7 && u !== 8 && b.gh > b.floors * 4 + 8) return [byFloors, 'slim'];
+  if (wood && byFloors && b.area < 1000 && b.gh > b.floors * 4 + 5) return [b.floors * 4 + 5, 'wood'];
   if (b.floors >= 3 && b.area >= 100 && b.gh < b.floors * 2 && Math.abs(b.mh - byFloors) < Math.abs(b.gh - byFloors)) return [b.mh, 'low'];
   return [b.gh, ''];
 };
 let outside = 0, small = 0, onSea = 0;
-const hWhy = { none: 0, high: 0, low: 0 };
+const hWhy = { none: 0, high: 0, slim: 0, wood: 0, low: 0 };
 const rows = [];
 for (const b of all) {
   const [p] = b.parts, k = cellOf(p.x, p.z);
@@ -388,36 +392,65 @@ for (const b of all) {
   if (landRaw[k] === -32768) onSea++;
   const [h, why] = heightOf(b);
   b.h = h;
-  b.hGuess = why === 'none' || why === 'high';
+  b.why = why;
+  b.hGuess = why !== '' && why !== 'low'; // low は計測した高さそのもの（見積もりではない）
   if (why) hWhy[why]++;
   rows.push(b);
 }
-// 建てた年の記録が無い建物は、近くの記録がある建物からもらう（近い 8 棟までの中から、場所で決まる 1 棟）
-const CELL = 100, dated = new Map();
+// 建てた年の記録が無い建物は、近くの記録がある建物からもらう。高さの段（10 m 未満・10〜20 m・20 m 以上）が同じ建物だけを見る
+// （高い建物の年の記録は、ほとんどが戦後。となりの古い家の年をもらうと、大正の町に今のビルが建ってしまう）：
+//   10 m 未満 … 近い 8 棟までの中から、場所で決まる 1 棟の年（町の年代のばらつきを残す）
+//   10 m 以上 … 同じ段の近い 5 棟までの年の中央値。ただし、その段の記録の古いほうから 1 割めの年より前にはしない
+const CELL = 100, TIERS = [0, 10, 20];
+const tierOf = (b) => (b.h >= TIERS[2] ? 2 : b.h >= TIERS[1] ? 1 : 0);
 const key = (x, z) => Math.floor(x / CELL) + ',' + Math.floor(z / CELL);
-for (const b of rows) if (b.year) { const k = key(b.parts[0].x, b.parts[0].z); if (!dated.has(k)) dated.set(k, []); dated.get(k).push(b); }
-const hash = (x, z) => { const v = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453; return v - Math.floor(v); };
-let guessed = 0, alone = 0;
-const allYears = rows.filter((b) => b.year).map((b) => b.year).sort((a, b) => a - b), median = allYears[allYears.length >> 1];
+const dated = TIERS.map(() => new Map()), tierYears = TIERS.map(() => []);
 for (const b of rows) {
-  if (b.year) continue;
-  const { x, z } = b.parts[0];
+  if (!b.year) continue;
+  const t = tierOf(b), k = key(b.parts[0].x, b.parts[0].z);
+  if (!dated[t].has(k)) dated[t].set(k, []);
+  dated[t].get(k).push(b);
+  tierYears[t].push(b.year);
+}
+for (const ys of tierYears) ys.sort((a, b) => a - b);
+const allYears = tierYears.flat().sort((a, b) => a - b), median = allYears[allYears.length >> 1];
+const tierFloor = tierYears.map((ys) => (ys.length ? ys[Math.floor(ys.length * 0.1)] : median));
+const tierMedian = tierYears.map((ys) => (ys.length ? ys[ys.length >> 1] : median));
+const hash = (x, z) => { const v = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453; return v - Math.floor(v); };
+// 同じ段の、年の記録がある建物を近い順に並べる。まず近くを探し、3 棟に満たなければ範囲を広げる
+const nearDated = (t, x, z, reaches) => {
+  const ci = Math.floor(x / CELL), cj = Math.floor(z / CELL);
   let near = [];
-  for (const reach of [1, 2, 4]) {
+  for (const reach of reaches) {
     near = [];
-    const ci = Math.floor(x / CELL), cj = Math.floor(z / CELL);
     for (let j = cj - reach; j <= cj + reach; j++) for (let i = ci - reach; i <= ci + reach; i++) {
-      for (const o of dated.get(i + ',' + j) ?? []) {
+      for (const o of dated[t].get(i + ',' + j) ?? []) {
         const dist = Math.hypot(o.parts[0].x - x, o.parts[0].z - z);
         if (dist <= reach * CELL * 1.5) near.push([dist, o.year]);
       }
     }
     if (near.length >= 3) break;
   }
-  near.sort((a, b) => a[0] - b[0]);
-  if (near.length) b.yearGuess = near[Math.min(near.length, 8) * hash(x, z) | 0][1];
-  else { b.yearGuess = median; alone++; }
+  return near.sort((a, b) => a[0] - b[0]);
+};
+let guessed = 0, alone = 0;
+const guessedBy = TIERS.map(() => 0), raised = TIERS.map(() => 0);
+for (const b of rows) {
+  if (b.year) continue;
+  const { x, z } = b.parts[0], t = tierOf(b);
+  if (t === 0) {
+    const near = nearDated(0, x, z, [1, 2, 4]);
+    if (near.length) b.yearGuess = near[Math.min(near.length, 8) * hash(x, z) | 0][1];
+    else { b.yearGuess = median; alone++; }
+  } else {
+    const near = nearDated(t, x, z, [2, 4, 8, 16]).slice(0, 5).map((p) => p[1]).sort((a, b) => a - b);
+    let y = near.length ? near[near.length >> 1] : tierMedian[t];
+    if (!near.length) alone++;
+    if (y < tierFloor[t]) { y = tierFloor[t]; raised[t]++; }
+    b.yearGuess = y;
+  }
   guessed++;
+  guessedBy[t]++;
 }
 
 // ---------- 書き出す ----------
@@ -453,7 +486,7 @@ const meta = {
     { name: 'w', type: 'uint16', scale: 0.1, unit: 'm', note: '長い辺' },
     { name: 'd', type: 'uint16', scale: 0.1, unit: 'm', note: '短い辺' },
     { name: 'h', type: 'uint16', scale: 0.1, unit: 'm', note: '地面からの高さ（PLATEAU の立体の高さ。kind の 0x40 が立っていれば、階数などからの見積もり）' },
-    { name: 'year', type: 'uint16', note: '建てた年。0x8000 が立っていれば、近くの建物からの推定' },
+    { name: 'year', type: 'uint16', note: '建てた年。0x8000 が立っていれば、近くの建物からの推定（高さの段が同じ建物だけを見る）' },
     { name: 'ang', type: 'uint8', scale: Math.PI / 256, unit: 'rad', note: '長い辺の向き（東から南へ回る角）' },
     { name: 'kind', type: 'uint8', note: '下 4 ビット = 用途、次の 2 ビット = 構造、0x40 = 高さが推定、0x80 = 前の行と同じ建物の続き' },
   ],
@@ -461,7 +494,8 @@ const meta = {
   struct: STRUCT,
   stats: {
     yearRecorded: count((b) => b.year), yearGuessed: guessed,
-    heightGuessed: hWhy.none + hWhy.high, heightNoMeasure: hWhy.none, heightTooHigh: hWhy.high, heightFromMeasured: hWhy.low,
+    yearGuessedByHeight: TIERS.map((from, t) => ({ fromM: from, guessed: guessedBy[t], notBefore: t ? tierFloor[t] : null, raised: raised[t] })),
+    heightGuessed: hWhy.none + hWhy.high + hWhy.slim + hWhy.wood, heightNoMeasure: hWhy.none, heightTooHigh: hWhy.high, heightSlim: hWhy.slim, heightWoodCap: hWhy.wood, heightFromMeasured: hWhy.low,
     split: count((b) => b.parts.length > 1), droppedSmall: small, droppedOutside: outside, onSeaCell: onSea,
   },
 };
@@ -476,8 +510,10 @@ const pct = (vals, ps = [0, 5, 25, 50, 75, 95, 99, 100]) => {
 };
 const tally = (f) => { const c = new Map(); for (const b of rows) c.set(f(b), (c.get(f(b)) ?? 0) + 1); return [...c].sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(' / '); };
 console.log(`使う建物 ${rows.length}（行 ${N}・${(bin.length / 1024).toFixed(0)} KB）  区や格子の外 ${outside}  ${opt.minArea} m2 未満で外した ${small}  海のマスの上 ${onSea}`);
-console.log(`年の記録あり ${meta.stats.yearRecorded}  近くからの推定 ${guessed}（近くに記録が無く全体の中央値 ${median} にした ${alone}）`);
-console.log(`高さの見積もり ${hWhy.none + hWhy.high}（計測が無い ${hWhy.none}・階数の割に高すぎる家 ${hWhy.high}）  計測した高さを使った ${hWhy.low}`);
+console.log(`年の記録あり ${meta.stats.yearRecorded}  近くからの推定 ${guessed}（近くに同じ高さの段の記録が無く、中央値にした ${alone}）`);
+console.log('年の推定の内訳  ' + TIERS.map((from, t) => `${from} m〜: ${guessedBy[t]}` + (t ? `（${tierFloor[t]} 年より前にはしない。引き上げた ${raised[t]}）` : '')).join('  '));
+console.log('推定した年（10 m 以上の建物）  ' + (guessedBy[1] + guessedBy[2] ? pct(rows.filter((b) => !b.year && b.h >= TIERS[1]).map((b) => b.yearGuess)) : '-'));
+console.log(`高さの見積もり ${meta.stats.heightGuessed}（計測が無い ${hWhy.none}・階数の割に高すぎる家 ${hWhy.high}・細くて高すぎる ${hWhy.slim}・木造で高すぎる ${hWhy.wood}）  計測した高さを使った ${hWhy.low}`);
 console.log('面積 m2  ' + pct(rows.map((b) => b.area)));
 console.log('高さ m   ' + pct(rows.map((b) => b.h)));
 console.log('面積 ÷ 外接長方形  ' + pct(rows.map((b) => b.fill)));
@@ -491,7 +527,7 @@ if (opt.dump) {
   fs.writeFileSync(opt.dump, JSON.stringify(rows.map((b) => ({
     x: +b.parts[0].x.toFixed(1), z: +b.parts[0].z.toFixed(1), w: +b.rectW.toFixed(1), d: +b.rectD.toFixed(1), area: +b.area.toFixed(1), fill: +b.fill.toFixed(3),
     h: +b.h.toFixed(1), hGuess: b.hGuess, mh: +b.mh.toFixed(1), gh: +b.gh.toFixed(1), year: b.year, yearGuess: b.yearGuess ?? 0, floors: b.floors,
-    usage: b.usage, struct: b.struct, parts: b.parts.length,
+    usage: b.usage, struct: b.struct, parts: b.parts.length, why: b.why,
   }))));
   console.log('調べ用: ' + opt.dump);
 }
