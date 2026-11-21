@@ -8,8 +8,10 @@
 //   その年から今の建物が建つまでのあいだ、「前の建物」を置く。家の大きさの区画には家を 1 軒、広い区画には家の並び、
 //   工場・倉庫の区画と、戦前の埋め立て地の広い区画には倉庫。昔の町並みは見積もりで、史実の再現ではない。
 // - 今の建物の長方形 1 つ、前の建物 1 つが、それぞれ 1 つのインスタンス。建つ年となくなる年を持ち、頂点シェーダーが出し入れする。
-// - 数が多いので、1.5 km ごとのかたまりに分け、画面で小さくしか見えない建物は描かない。
+// - 数が多い（2026-11 のデータで、今の建物 33,557 棟＝長方形 37,473 個、前の建物 25,818 棟）ので、1.5 km ごとのかたまり
+//   （メッシュは 87 個）に分け、画面で小さくしか見えない建物は描かない。
 //   前の建物は今の建物と別のメッシュにして、1 つも残っていない年には描かない。
+// - 屋根の色は記録にない。瓦・茅・波板などの種類を、建てた年ごろと用途から割り振っている（見た目のための見積もり）。
 import * as THREE from 'three';
 import { VILLAGES, UNIT, Y_PER_M, townYearFn } from './geo.js';
 import { HOLE_GLSL, yearPatch, depthMaterialWith } from './props.js';
@@ -35,10 +37,11 @@ const WALL_SHED = ['#b9b2a4', '#a99f8d', '#c4beb2'].map(bytes);                 
 const WALL_BRICK = bytes('#94584a');
 const pick = (list, u) => list[Math.min(list.length - 1, Math.floor(u * list.length))];
 
-// 屋根の種類。インスタンスの色の 4 つめに「種類 × 64 ＋ 濃さ（0〜63）」で入れる
-const FLAT = 0, TILE = 1, THATCH = 2, SHEET = 3;
-const ROOFS = { flat: '#b9b8b3', tile: '#4b4e57', thatch: '#8b7b5e', sheet: '#8a8b88' }; // 平らな屋根・瓦・茅・波板
-const tone = (kind, u) => kind * 64 + Math.min(63, Math.floor(u * 64));
+// 屋根の種類。インスタンスの色の 4 つめに「種類 × 32 ＋ 濃さ（0〜31）」で入れる
+const FLAT = 0, TILE = 1, THATCH = 2, SHEET = 3, SLATE = 4, BROWN = 5, BLUE = 6;
+const ROOF_NAMES = ['flat', 'tile', 'thatch', 'sheet', 'slate', 'brown', 'blue']; // 平らな屋根・いぶし瓦・茅・波板・黒っぽいスレート・茶の瓦・青い瓦
+const ROOFS = ['#b9b8b3', '#6c6f78', '#9a8964', '#8a8b88', '#4d5058', '#7b6253', '#5a6f88'];
+const tone = (kind, u) => kind * 32 + Math.min(31, Math.floor(u * 32));
 
 // 場所から決まる 0〜1 の数（読み込むたびに同じ町になるように、乱数は使わない）
 function hash(a, b, salt) {
@@ -75,7 +78,7 @@ export function readTown(geo, data) {
         h: Math.max(2.5, dv.getUint16(N * 8 + i * 2, true) * 0.1),
         year: yr & 0x7fff, yearGuess: (yr & YEAR_GUESS) !== 0,
         usage: kind & 15, struct: (kind >> 4) & 3,
-        u: [1, 2, 3, 4, 5, 6, 7, 8].map((s) => hash(xi, zi, s)),
+        u: [1, 2, 3, 4, 5, 6, 7, 8, 9].map((s) => hash(xi, zi, s)),
         village: null, // 集落の家が建つ年（集落の区画だけ）
         pre: [],       // 前の建物
       });
@@ -311,8 +314,12 @@ function lookOf(b, shortSide) {
     if (shortSide <= 45) { pitch = old ? 0.6 : 0.3; kind = old ? TILE : SHEET; }
     wall = pick(old && light ? WALL_OLD : WALL_SHED, b.u[4]);
   } else if (light && b.h <= 11 && shortSide <= 14) {
-    // 家：切妻の屋根。戦前からの家は木と土壁の色
-    pitch = 1; kind = TILE;
+    // 家：切妻の屋根。戦前からの家は木と土壁の色。高度成長のころからの家には、スレートや色のついた瓦を混ぜる
+    pitch = 1;
+    const r = b.u[8];
+    kind = b.year2 < 1960 ? TILE
+      : b.year2 < 1990 ? (r < 0.62 ? TILE : r < 0.76 ? SLATE : r < 0.89 ? BROWN : BLUE)
+        : (r < 0.42 ? TILE : r < 0.74 ? SLATE : r < 0.91 ? BROWN : BLUE);
     if (b.year2 < 1950) wall = pick(WALL_OLD, b.u[4]);
   }
   // 戦前から残る、木造でない建物：大正の初めまでのものは煉瓦色、そのあとのものは 3 つに 1 つ
@@ -327,12 +334,12 @@ export function buildRealTown(geo, shared, town) {
   group.name = 'town';
   const state = { detail: DETAIL };
   const uBH = { value: HEIGHT };
-  const roofs = Object.fromEntries(Object.entries(ROOFS).map(([k, v]) => [k, { value: srgb(v) }]));
+  const uRoofs = { value: ROOFS.map(srgb) };
 
   // インスタンスごと：aTimes = (建つ年, なくなる年, 陸になる段, 土台の高さ)、aDim = (長い辺, 高さ m, 短い辺, 屋根の勾配)、
-  // aWall = (壁の色, 屋根の種類 × 64 ＋ 濃さ)
+  // aWall = (壁の色, 屋根の種類 × 32 ＋ 濃さ)
   const vCommon = `attribute vec4 aTimes; attribute vec4 aDim; attribute vec4 aWall; attribute float aRoof;
-    uniform vec3 uRoofFlat; uniform vec3 uRoofTile; uniform vec3 uRoofThatch; uniform vec3 uRoofSheet; uniform float uCoast; uniform float uBH; ${HOLE_GLSL} varying vec3 vBCol;`;
+    uniform vec3 uRoofs[${ROOFS.length}]; uniform float uCoast; uniform float uBH; ${HOLE_GLSL} varying vec3 vBCol;`;
   const vBegin = `
     float bs = smoothstep(aTimes.x, aTimes.x + 2.0, uYear) * (1.0 - smoothstep(aTimes.y - 1.0, aTimes.y, uYear)) * clamp(uCoast - aTimes.z + 1.0, 0.0, 1.0);
     bs *= outsideHole(instanceMatrix[3].xz);
@@ -342,13 +349,9 @@ export function buildRealTown(geo, shared, town) {
     float y = step(0.5, position.y) * eaveY + step(1.5, position.y) * rise * uBH;
     vec2 over = aRoof * step(0.5, aDim.w) * 0.05 * sign(position.xz);
     transformed = vec3((position.x * aDim.x + over.x) * on, y * bs, (position.z * aDim.z + over.y) * on);
-    float bTone = aWall.a * 255.0 + 0.5, bKind = floor(bTone / 64.0);
-    vec3 bRoof = mix(mix(uRoofFlat, uRoofTile, step(0.5, bKind)), mix(uRoofThatch, uRoofSheet, step(2.5, bKind)), step(1.5, bKind));
-    vBCol = mix(aWall.rgb, bRoof * (0.84 + 0.3 * (bTone - bKind * 64.0) / 64.0), aRoof);`;
-  const patch = yearPatch(shared, vCommon, vBegin, {
-    uRoofFlat: roofs.flat, uRoofTile: roofs.tile, uRoofThatch: roofs.thatch, uRoofSheet: roofs.sheet, uBH,
-    uCoast: shared.uCoast, uHole: shared.uHole, uHoleR: shared.uHoleR,
-  });
+    float bTone = aWall.a * 255.0 + 0.5, bKind = min(floor(bTone / 32.0), ${ROOFS.length - 1}.0);
+    vBCol = mix(aWall.rgb, uRoofs[int(bKind)] * (0.8 + 0.4 * (bTone - bKind * 32.0) / 32.0), aRoof);`;
+  const patch = yearPatch(shared, vCommon, vBegin, { uRoofs, uBH, uCoast: shared.uCoast, uHole: shared.uHole, uHoleR: shared.uHoleR });
   const mat = new THREE.MeshStandardMaterial({ roughness: 0.82, flatShading: true });
   mat.onBeforeCompile = (sh) => {
     patch(sh);
@@ -453,8 +456,8 @@ export function buildRealTown(geo, shared, town) {
     set height(v) { uBH.value = v; },
     // 今描いているインスタンスの数（確認用）
     drawn: () => chunks.reduce((s, c) => s + (c.mesh.visible ? c.mesh.count : 0), 0),
-    // 屋根の色を変える（確認用）。name = flat / tile / thatch / sheet
-    roof: (name, hex) => { roofs[name].value.set(hex); },
+    // 屋根の色を変える（確認用）。name は ROOF_NAMES のどれか
+    roof: (name, hex) => { uRoofs.value[ROOF_NAMES.indexOf(name)]?.set(hex); },
   };
   return group;
 }
